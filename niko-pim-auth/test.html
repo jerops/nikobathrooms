@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Niko PIM Test</title>
+</head>
+<body>
+    <h1>Niko PIM Authentication Test</h1>
+    <div id="status">Loading...</div>
+    
+    <script src="dist/niko-pim.min.js"></script>
+    <script>
+        // Test the initialization (remove manual init call)
+        setTimeout(() => {
+            const statusDiv = document.getElementById('status');
+            if (window.NikoPIM && window.NikoPIM.isInitialized) {
+                statusDiv.innerHTML = 'NikoPIM initialized successfully!';
+                statusDiv.style.color = 'green';
+                console.log('Current user:', window.NikoPIM.currentUser);
+            } else {
+                statusDiv.innerHTML = 'NikoPIM failed to initialize';
+                statusDiv.style.color = 'red';
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

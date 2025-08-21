@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Niko PIM Auth Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        input, select, button { margin: 5px; padding: 8px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+        .disabled { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <h1>Niko PIM Authentication Test</h1>
+    <div id="init-status">Initializing...</div>
+    
+    <div id="test-sections" class="disabled">
+        <div class="section">
+            <h3>Register Test</h3>
+            <input type="email" id="reg-email" placeholder="Email" value="test@example.com">
+            <input type="password" id="reg-password" placeholder="Password" value="password123">
+            <input type="text" id="reg-name" placeholder="Name" value="Test User">
+            <select id="reg-type">
+                <option value="Customer">Customer</option>
+                <option value="Retailer">Retailer</option>
+            </select>
+            <button onclick="testRegister()">Register</button>
+            <div id="reg-result" class="result"></div>
+        </div>
+
+        <div class="section">
+            <h3>Login Test</h3>
+            <input type="email" id="login-email" placeholder="Email" value="test@example.com">
+            <input type="password" id="login-password" placeholder="Password" value="password123">
+            <button onclick="testLogin()">Login</button>
+            <div id="login-result" class="result"></div>
+        </div>
+
+        <div class="section">
+            <h3>Logout Test</h3>
+            <button onclick="testLogout()">Logout</button>
+            <div id="logout-result" class="result"></div>
+        </div>
+    </div>
+
+    <script src="dist/niko-pim.min.js"></script>
+    <script>
+        // Simple 3-second delay then enable tests
+        setTimeout(() => {
+            document.getElementById('init-status').innerHTML = 'Ready for testing';
+            document.getElementById('init-status').style.color = 'green';
+            document.getElementById('test-sections').classList.remove('disabled');
+            
+            // Log what's actually available
+            console.log('NikoPIM object:', window.NikoPIM);
+            console.log('Register function:', window.NikoPIM.register);
+        }, 3000);
+    
+        async function testRegister() {
+            try {
+                console.log('Attempting registration...');
+                const email = document.getElementById('reg-email').value;
+                const password = document.getElementById('reg-password').value;
+                const name = document.getElementById('reg-name').value;
+                const userType = document.getElementById('reg-type').value;
+                
+                const result = await window.NikoPIM.register(email, password, name, userType);
+                document.getElementById('reg-result').innerHTML = JSON.stringify(result, null, 2);
+            } catch (error) {
+                console.error('Registration error:', error);
+                document.getElementById('reg-result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+    
+        async function testLogin() {
+            try {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                
+                const result = await window.NikoPIM.login(email, password);
+                document.getElementById('login-result').innerHTML = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('login-result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+    
+        async function testLogout() {
+            try {
+                const result = await window.NikoPIM.logout();
+                document.getElementById('logout-result').innerHTML = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('logout-result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
