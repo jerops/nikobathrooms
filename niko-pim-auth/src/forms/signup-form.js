@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+/*document.addEventListener('DOMContentLoaded', function() {
     function waitForNikoPIM() {
       if (window.NikoPIM && window.NikoPIM.register) {
         setupSignupForms();
@@ -138,4 +138,55 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     waitForNikoPIM();
-  });
+  });*/
+
+  import { getSupabase } from '../api/supabase-client.js';
+import { webflowClient } from '../api/webflow-client.js';
+import { USER_ROLES } from '../config/constants.js';
+
+export async function registerUser(email, password, name, userType) {
+  const supabase = getSupabase();
+  
+  try {
+    // Step 1: Validate retailer email if needed
+    if (userType === 'Retailer') {
+      const isValidRetailer = await webflowClient.validateRetailerEmail(email);
+      if (!isValidRetailer) {
+        throw new Error('Email not found in authorized retailers list');
+      }
+    }
+
+    // Step 2: Register with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name,
+          user_type: userType
+        }
+      }
+    });
+
+    if (authError) throw authError;
+
+    // Step 3: Create corresponding Webflow CMS entry
+    const userData = {
+      name,
+      email,
+      supabaseId: authData.user.id
+    };
+
+    if (userType === 'Customer') {
+      await webflowClient.createCustomer(userData);
+    } else {
+      await webflowClient.createRetailer(userData);
+    }
+
+    console.log('User created in both Supabase and Webflow CMS');
+    return { success: true, user: authData.user };
+  } catch (error) {
+    console.error('Registration failed:', error);
+    return { success: false, error: error.message };
+  }
+}
