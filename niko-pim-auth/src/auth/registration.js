@@ -1,20 +1,11 @@
 import { getSupabase } from '../api/supabase-client.js';
-import { webflowClient } from '../api/webflow-client.js';
-import { CONFIG, USER_ROLES } from '../config/constants.js';
+import { USER_ROLES } from '../config/constants.js';
 
 export async function registerUser(email, password, name, userType) {
   const supabase = getSupabase();
   
   try {
-    // Step 1: Validate retailer email if needed
-    if (userType === USER_ROLES.RETAILER) {
-      const isValidRetailer = await webflowClient.validateRetailerEmail(email);
-      if (!isValidRetailer) {
-        throw new Error('Email not found in authorized retailers list');
-      }
-    }
-
-    // Step 2: Register with Supabase Auth
+    // Step 1: Register with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -28,24 +19,24 @@ export async function registerUser(email, password, name, userType) {
 
     if (authError) throw authError;
 
-    // Step 3: Create corresponding Webflow CMS entry
+    // Step 2: Call Edge Function to create Webflow CMS entry
     try {
-      const userData = {
-        name,
-        email,
-        supabaseId: authData.user.id
-      };
+      const { data, error } = await supabase.functions.invoke('create-webflow-user', {
+        body: {
+          user_id: authData.user.id,
+          email,
+          name,
+          user_type: userType
+        }
+      });
 
-      if (userType === USER_ROLES.CUSTOMER) {
-        await webflowClient.createCustomer(userData);
+      if (error) {
+        console.error('Webflow CMS creation failed:', error);
       } else {
-        await webflowClient.createRetailer(userData);
+        console.log('User created in both Supabase and Webflow CMS:', data);
       }
-      
-      console.log('User created in both Supabase and Webflow CMS');
     } catch (webflowError) {
-      console.error('Webflow CMS creation failed:', webflowError);
-      // Continue anyway - user exists in Supabase
+      console.error('Edge function call failed:', webflowError);
     }
 
     return { success: true, user: authData.user };
