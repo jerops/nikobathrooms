@@ -30,11 +30,17 @@ export async function registerUser(email, password, name, userType) {
         }
       });
 
+      console.log('Edge function response:', data, error);
+      
       if (error) {
         console.error('Webflow CMS creation failed:', error);
       } else {
         console.log('User created in both Supabase and Webflow CMS:', data);
       }
+
+      // Add delay to see logs before redirect
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
     } catch (webflowError) {
       console.error('Edge function call failed:', webflowError);
     }
