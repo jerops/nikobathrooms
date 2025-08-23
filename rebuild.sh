@@ -1,38 +1,56 @@
 #!/bin/bash
 
-# Quick Deploy Script for Niko PIM - fixes the registration issue
-# Run this script to rebuild and deploy after fixing the ES6 module issue
+# Niko PIM Authentication System - Rebuild & Deploy Script
+# This script rebuilds the authentication system and prepares it for deployment
 
-echo "🔧 Rebuilding Niko PIM Authentication System..."
+echo "🚀 Starting Niko PIM Authentication System rebuild..."
 
 # Navigate to the project directory
-cd niko-pim-auth
+cd "$(dirname "$0")/niko-pim-auth" || exit 1
 
-# Install dependencies (if needed)
-echo "📦 Installing dependencies..."
-npm install
+# Check if we're in the right directory
+if [ ! -f "package.json" ]; then
+    echo "❌ Error: Not in the correct directory. package.json not found."
+    exit 1
+fi
 
-# Clean previous build
-echo "🧹 Cleaning dist folder..."
-npm run clean
+# Install dependencies if node_modules doesn't exist
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing dependencies..."
+    npm install
+fi
 
-# Build production version
-echo "🏗️ Building production version..."
-npm run build
+echo "🔧 Building production bundle with hardcoded credentials..."
 
-echo "✅ Build completed!"
+# Build the production bundle
+npm run build:prod
 
-# The fixed signup.js now works with browser JavaScript instead of ES6 modules
-# The key fix was:
-# - Removed ES6 import/export statements
-# - Restored browser-compatible event listeners
-# - Fixed registration flow to work with existing window.NikoPIM object
-
-echo "🚀 Ready to deploy:"
-echo "- dist/niko-pim.min.js (main authentication library)"
-echo "- dist/niko-pim-webflow.min.js (webflow integration)"
-
-echo "📋 Next steps:"
-echo "1. Upload dist files to jsDelivr CDN"
-echo "2. Test registration forms in Webflow"
-echo "3. Verify users are created in both Supabase and Webflow CMS"
+# Check if build was successful
+if [ $? -eq 0 ]; then
+    echo "✅ Build completed successfully!"
+    
+    # Display build information
+    echo ""
+    echo "📊 Build Output:"
+    echo "├── niko-pim.min.js ($(wc -c < dist/niko-pim.min.js | xargs) bytes)"
+    echo "├── niko-pim-webflow.min.js ($(wc -c < dist/niko-pim-webflow.min.js | xargs) bytes)"
+    echo "└── Source maps and licenses generated"
+    
+    echo ""
+    echo "🎯 Next Steps:"
+    echo "1. Upload dist/niko-pim.min.js to your CDN (jsDelivr or hosting)"
+    echo "2. Update Webflow pages to use the new version"
+    echo "3. Test registration on: https://nikobathrooms.ie/dev/app/auth/sign-up"
+    echo "4. Clear browser cache after deployment"
+    
+    echo ""
+    echo "🌐 CDN Upload Commands:"
+    echo "Upload: dist/niko-pim.min.js"
+    echo "To: https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/niko-pim-auth/dist/niko-pim.min.js"
+    
+    echo ""
+    echo "✨ Build complete! Ready for deployment."
+else
+    echo "❌ Build failed! Check the errors above."
+    exit 1
+fi
