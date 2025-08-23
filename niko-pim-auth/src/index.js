@@ -11,10 +11,21 @@ class NikoPIM {
     this.userRole = null;
     this.isInitialized = false;
     this.authStateListeners = [];
-    this.isRedirecting = false; // Prevent infinite redirects
+    this.isProcessingAuth = false; // Prevent recursive auth processing
+    this.initializationPromise = null; // Prevent multiple initializations
   }
 
   async init() {
+    // Prevent multiple initializations
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+    
+    this.initializationPromise = this._doInit();
+    return this.initializationPromise;
+  }
+  
+  async _doInit() {
     console.log('Initializing Niko PIM Authentication System...');
     
     try {
@@ -24,15 +35,18 @@ class NikoPIM {
       // Initialize Supabase client
       this.supabase = initializeSupabase();
       
-      // Check current auth state (but don't auto-redirect on signup page)
-      if (!this.isSignupOrLoginPage()) {
-        await this.checkAuthState();
-      } else {
-        console.log('ℹ️ On auth page, skipping auto-redirect');
-      }
+      // Only check auth state if not on auth pages (prevent redirects during signup/login)
+      const currentPath = window.location.pathname;
+      const isAuthPage = currentPath.includes('/auth/') || 
+                        currentPath.includes('sign-up') || 
+                        currentPath.includes('log-in');
       
-      // Setup event listeners
-      this.setupEventListeners();
+      if (!isAuthPage) {
+        await this.checkAuthState();
+        this.setupEventListeners();
+      } else {
+        console.log('ℹ️ On auth page, skipping auth state check to prevent redirects');
+      }
       
       this.isInitialized = true;
       console.log('✅ Niko PIM initialized successfully');
@@ -44,22 +58,15 @@ class NikoPIM {
     }
   }
 
-  isSignupOrLoginPage() {
-    const currentPath = window.location.pathname;
-    return currentPath.includes('/auth/') || 
-           currentPath.includes('sign-up') || 
-           currentPath.includes('log-in') ||
-           currentPath.includes('login') ||
-           currentPath.includes('test-auth');
-  }
-
   async checkAuthState() {
-    if (this.isRedirecting) {
-      console.log('⚠️ Redirect in progress, skipping auth state check');
+    if (this.isProcessingAuth) {
+      console.log('⚠️ Auth processing in progress, skipping...');
       return;
     }
-
+    
     try {
+      this.isProcessingAuth = true;
+      
       const { data: { user }, error } = await this.supabase.auth.getUser();
       
       if (error) {
@@ -72,8 +79,13 @@ class NikoPIM {
         await this.determineUserRole(user);
         console.log('✅ User authenticated:', user.email, 'Role:', this.userRole);
         
-        // Only redirect if not on auth pages and not already redirecting
-        if (!this.isSignupOrLoginPage() && !this.isRedirecting) {
+        // Only redirect if not on auth pages
+        const currentPath = window.location.pathname;
+        const isAuthPage = currentPath.includes('/auth/') || 
+                          currentPath.includes('sign-up') || 
+                          currentPath.includes('log-in');
+        
+        if (!isAuthPage) {
           this.redirectToDashboard();
         }
       } else {
@@ -81,6 +93,8 @@ class NikoPIM {
       }
     } catch (error) {
       console.error('❌ Auth state check failed:', error);
+    } finally {
+      this.isProcessingAuth = false;
     }
   }
 
@@ -107,20 +121,9 @@ class NikoPIM {
         return;
       }
       
-      // Query user profile table if metadata is not available
-      const { data: profile, error } = await this.supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) {
-        console.warn('Could not fetch user profile:', error);
-        // Default to Customer if no role found
-        this.userRole = USER_ROLES.CUSTOMER;
-      } else {
-        this.userRole = profile.role || USER_ROLES.CUSTOMER;
-      }
+      // Default to Customer if no role found
+      this.userRole = USER_ROLES.CUSTOMER;
+      console.log('ℹ️ No specific role found, defaulting to Customer');
       
     } catch (error) {
       console.error('Error determining user role:', error);
@@ -129,7 +132,7 @@ class NikoPIM {
   }
 
   redirectToDashboard() {
-    if (typeof window === 'undefined' || this.isRedirecting) return;
+    if (typeof window === 'undefined' || this.isProcessingAuth) return;
     
     const currentPath = window.location.pathname;
     let targetPath;
@@ -144,31 +147,36 @@ class NikoPIM {
         break;
     }
     
-    // Prevent redirect loops
-    if (currentPath === targetPath || this.isSignupOrLoginPage()) {
-      return;
+    // Only redirect if not already on the target path and not on auth pages
+    const isAuthPage = currentPath.includes('/auth/') || 
+                      currentPath.includes('sign-up') || 
+                      currentPath.includes('log-in');
+    
+    if (currentPath !== targetPath && !isAuthPage) {
+      console.log(`Redirecting to dashboard: ${targetPath}`);
+      // Use a timeout to prevent immediate redirect loops
+      setTimeout(() => {
+        window.location.href = targetPath;
+      }, 100);
     }
-    
-    console.log(`Redirecting to dashboard: ${targetPath}`);
-    this.isRedirecting = true;
-    
-    // Add delay to prevent race conditions
-    setTimeout(() => {
-      window.location.href = targetPath;
-    }, 500);
   }
 
   setupEventListeners() {
+    if (this.authSubscription) {
+      // Cleanup existing subscription
+      this.authSubscription.unsubscribe();
+    }
+    
     // Listen for auth state changes
     const { data: { subscription } } = this.supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
       
-      // Prevent recursive calls during state changes
-      if (this.isRedirecting) {
-        console.log('⚠️ Redirect in progress, skipping auth state handler');
+      // Prevent processing during active auth operations
+      if (this.isProcessingAuth) {
+        console.log('⚠️ Auth processing in progress, skipping state change handler');
         return;
       }
-
+      
       await this.handleAuthStateChange(event, session);
       
       // Notify listeners
@@ -186,21 +194,28 @@ class NikoPIM {
 
   async handleAuthStateChange(event, session) {
     try {
+      this.isProcessingAuth = true;
+      
       switch (event) {
         case 'SIGNED_IN':
           this.currentUser = session.user;
           await this.determineUserRole(session.user);
           
-          // Only redirect if not on auth page
-          if (!this.isSignupOrLoginPage()) {
-            this.redirectToDashboard();
+          // Only redirect if not on auth pages
+          const currentPath = window.location.pathname;
+          const isAuthPage = currentPath.includes('/auth/') || 
+                            currentPath.includes('sign-up') || 
+                            currentPath.includes('log-in');
+          
+          if (!isAuthPage) {
+            setTimeout(() => this.redirectToDashboard(), 100);
           }
           break;
           
         case 'SIGNED_OUT':
           this.currentUser = null;
           this.userRole = null;
-          this.redirectToLogin();
+          // Don't auto-redirect to login, let the app handle it
           break;
           
         case 'TOKEN_REFRESHED':
@@ -218,23 +233,8 @@ class NikoPIM {
       }
     } catch (error) {
       console.error('Auth state change handler error:', error);
-    }
-  }
-
-  redirectToLogin() {
-    if (typeof window === 'undefined' || this.isRedirecting) return;
-    
-    const currentPath = window.location.pathname;
-    const loginPath = CONFIG.ROUTES.LOGIN;
-    
-    // Only redirect if not already on login/auth page
-    if (currentPath !== loginPath && !this.isSignupOrLoginPage()) {
-      console.log('Redirecting to login');
-      this.isRedirecting = true;
-      
-      setTimeout(() => {
-        window.location.href = loginPath;
-      }, 500);
+    } finally {
+      this.isProcessingAuth = false;
     }
   }
 
@@ -248,12 +248,16 @@ class NikoPIM {
     }
     
     try {
+      this.isProcessingAuth = true;
+      
       const result = await registerUser(this.supabase, email, password, name, userType);
       console.log('✅ Registration result:', result);
       return result;
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
+    } finally {
+      this.isProcessingAuth = false;
     }
   }
 
@@ -266,12 +270,16 @@ class NikoPIM {
     }
     
     try {
+      this.isProcessingAuth = true;
+      
       const result = await loginUser(this.supabase, email, password);
       console.log('✅ Login result:', result);
       return result;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
+    } finally {
+      this.isProcessingAuth = false;
     }
   }
 
@@ -284,12 +292,16 @@ class NikoPIM {
     }
     
     try {
+      this.isProcessingAuth = true;
+      
       const result = await logoutUser(this.supabase);
       console.log('✅ Logout result:', result);
       return result;
     } catch (error) {
       console.error('Logout failed:', error);
       throw error;
+    } finally {
+      this.isProcessingAuth = false;
     }
   }
 
@@ -325,16 +337,16 @@ class NikoPIM {
     }
     this.authStateListeners = [];
     this.isInitialized = false;
-    this.isRedirecting = false;
+    this.isProcessingAuth = false;
+    this.initializationPromise = null;
   }
 }
 
-// Prevent multiple initializations
-if (typeof window !== 'undefined' && !window.NikoPIMInitialized) {
-  window.NikoPIMInitialized = true;
-  
+// Prevent multiple initializations globally
+if (typeof window !== 'undefined' && !window.NikoPIMInstance) {
   const nikoPIM = new NikoPIM();
   window.NikoPIM = nikoPIM;
+  window.NikoPIMInstance = nikoPIM;
   
   // Wait for DOM to be ready
   const initializeWhenReady = () => {
