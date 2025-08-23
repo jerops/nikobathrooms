@@ -115,6 +115,16 @@ class WebflowAuthIntegration {
     });
   }
 
+  // FIXED: Domain-aware redirect logic from previous implementation
+  getRedirectUrl(userType) {
+    const currentDomain = window.location.origin;
+    const basePath = '/dev/app';
+    
+    return userType === 'Customer' 
+      ? `${currentDomain}${basePath}/customer/dashboard`
+      : `${currentDomain}${basePath}/retailer/dashboard`;
+  }
+
   async handleLogin(form, index = 0) {
     try {
       console.log(`Handling login for form ${index}`);
@@ -139,8 +149,7 @@ class WebflowAuthIntegration {
         
         // Small delay to show success message
         setTimeout(() => {
-          // The authentication system will handle the redirect automatically
-          // But we can also trigger it manually if needed
+          // FIXED: Use domain-aware redirect
           this.redirectAfterLogin(result.role || window.NikoPIM.getUserRole());
         }, 1000);
         
@@ -185,14 +194,11 @@ class WebflowAuthIntegration {
       const result = await window.NikoPIM.register(email, password, name, userType);
 
       if (result.success) {
-        this.showSuccess(form, 'Registration successful! Please check your email to verify your account.');
+        this.showSuccess(form, 'Registration successful! Redirecting...');
         
-        // Clear form
-        form.reset();
-        
-        // Redirect to login after successful registration
+        // FIXED: Use domain-aware redirect instead of going to login
         setTimeout(() => {
-          window.location.href = '/dev/app/auth/log-in';
+          window.location.href = this.getRedirectUrl(userType);
         }, 2000);
         
       } else {
@@ -224,12 +230,8 @@ class WebflowAuthIntegration {
   }
 
   redirectAfterLogin(userRole) {
-    const routes = {
-      'Retailer': '/dev/app/retailer/dashboard',
-      'Customer': '/dev/app/customer/dashboard'
-    };
-    
-    const targetRoute = routes[userRole] || routes['Customer'];
+    // FIXED: Use domain-aware redirect
+    const targetRoute = this.getRedirectUrl(userRole);
     console.log(`Redirecting ${userRole} to ${targetRoute}`);
     window.location.href = targetRoute;
   }
