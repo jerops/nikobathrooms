@@ -1,15 +1,15 @@
-
+// Environment configuration with secure fallbacks
 export const CONFIG = {
   SUPABASE: {
-    URL: 'https://bzjoxjqfpmjhbfijthpp.supabase.co',
-    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6am94anFmcG1qaGJmaWp0aHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NjIyMzksImV4cCI6MjA3MTMzODIzOX0.sL9omeLIgpgqYjTJM6SGQPSvUvm5z-Yr9rOzkOi2mJk'
+    URL: process.env.SUPABASE_URL || (typeof window !== 'undefined' && window.ENV_SUPABASE_URL) || '',
+    ANON_KEY: process.env.SUPABASE_ANON_KEY || (typeof window !== 'undefined' && window.ENV_SUPABASE_ANON_KEY) || ''
   },
   WEBFLOW: {
-    SITE_ID: '67378d122c9df01858dd36f6',
+    SITE_ID: process.env.WEBFLOW_SITE_ID || (typeof window !== 'undefined' && window.ENV_WEBFLOW_SITE_ID) || '',
     COLLECTIONS: {
-      RETAILERS: '6738c46e5f48be10cf90c694',
-      CUSTOMERS: '68a6dc21ddfb81569ba773a4',
-      PRODUCTS: '67378d122c9df01858dd3747'
+      RETAILERS: process.env.WEBFLOW_RETAILERS_ID || (typeof window !== 'undefined' && window.ENV_WEBFLOW_RETAILERS_ID) || '',
+      CUSTOMERS: process.env.WEBFLOW_CUSTOMERS_ID || (typeof window !== 'undefined' && window.ENV_WEBFLOW_CUSTOMERS_ID) || '',
+      PRODUCTS: process.env.WEBFLOW_PRODUCTS_ID || (typeof window !== 'undefined' && window.ENV_WEBFLOW_PRODUCTS_ID) || ''
     }
   },
   ROUTES: {
@@ -27,3 +27,20 @@ export const USER_ROLES = {
   CUSTOMER: 'Customer',
   RETAILER: 'Retailer'
 };
+
+// Environment validation
+export function validateEnvironment() {
+  const required = [
+    { key: 'SUPABASE_URL', value: CONFIG.SUPABASE.URL },
+    { key: 'SUPABASE_ANON_KEY', value: CONFIG.SUPABASE.ANON_KEY }
+  ];
+  
+  const missing = required.filter(item => !item.value);
+  
+  if (missing.length > 0) {
+    console.error('Missing required environment variables:', missing.map(item => item.key));
+    throw new Error(`Missing required environment variables: ${missing.map(item => item.key).join(', ')}`);
+  }
+  
+  console.log('✅ Environment validation passed');
+}
