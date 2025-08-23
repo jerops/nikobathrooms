@@ -11,12 +11,17 @@ module.exports = (env, argv) => {
   });
 
   return {
-    entry: './src/index.js',
+    entry: {
+      'niko-pim': './src/index.js',
+      'niko-pim-webflow': './src/webflow-integration.js'
+    },
     output: {
-      filename: isDevelopment ? 'niko-pim.js' : 'niko-pim.min.js',
+      filename: isDevelopment ? '[name].js' : '[name].min.js',
       path: path.resolve(__dirname, 'dist'),
-      library: 'NikoPIM',
-      libraryTarget: 'umd',
+      library: {
+        name: '[name]',
+        type: 'umd'
+      },
       globalObject: 'this',
       clean: true // Clean dist folder before each build
     },
