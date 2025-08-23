@@ -11,6 +11,7 @@ class NikoPIM {
     this.userRole = null;
     this.isInitialized = false;
     this.authStateListeners = [];
+    this.isRedirecting = false; // Prevent infinite redirects
   }
 
   async init() {
@@ -23,8 +24,12 @@ class NikoPIM {
       // Initialize Supabase client
       this.supabase = initializeSupabase();
       
-      // Check current auth state
-      await this.checkAuthState();
+      // Check current auth state (but don't auto-redirect on signup page)
+      if (!this.isSignupOrLoginPage()) {
+        await this.checkAuthState();
+      } else {
+        console.log('ℹ️ On auth page, skipping auto-redirect');
+      }
       
       // Setup event listeners
       this.setupEventListeners();
@@ -39,7 +44,21 @@ class NikoPIM {
     }
   }
 
+  isSignupOrLoginPage() {
+    const currentPath = window.location.pathname;
+    return currentPath.includes('/auth/') || 
+           currentPath.includes('sign-up') || 
+           currentPath.includes('log-in') ||
+           currentPath.includes('login') ||
+           currentPath.includes('test-auth');
+  }
+
   async checkAuthState() {
+    if (this.isRedirecting) {
+      console.log('⚠️ Redirect in progress, skipping auth state check');
+      return;
+    }
+
     try {
       const { data: { user }, error } = await this.supabase.auth.getUser();
       
@@ -53,8 +72,10 @@ class NikoPIM {
         await this.determineUserRole(user);
         console.log('✅ User authenticated:', user.email, 'Role:', this.userRole);
         
-        // Redirect to appropriate dashboard
-        this.redirectToDashboard();
+        // Only redirect if not on auth pages and not already redirecting
+        if (!this.isSignupOrLoginPage() && !this.isRedirecting) {
+          this.redirectToDashboard();
+        }
       } else {
         console.log('ℹ️ No authenticated user');
       }
@@ -108,7 +129,7 @@ class NikoPIM {
   }
 
   redirectToDashboard() {
-    if (typeof window === 'undefined') return; // Server-side safety
+    if (typeof window === 'undefined' || this.isRedirecting) return;
     
     const currentPath = window.location.pathname;
     let targetPath;
@@ -123,22 +144,40 @@ class NikoPIM {
         break;
     }
     
-    // Only redirect if not already on the target path
-    if (currentPath !== targetPath && !currentPath.includes('test-auth')) {
-      console.log(`Redirecting to dashboard: ${targetPath}`);
-      window.location.href = targetPath;
+    // Prevent redirect loops
+    if (currentPath === targetPath || this.isSignupOrLoginPage()) {
+      return;
     }
+    
+    console.log(`Redirecting to dashboard: ${targetPath}`);
+    this.isRedirecting = true;
+    
+    // Add delay to prevent race conditions
+    setTimeout(() => {
+      window.location.href = targetPath;
+    }, 500);
   }
 
   setupEventListeners() {
     // Listen for auth state changes
     const { data: { subscription } } = this.supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
+      
+      // Prevent recursive calls during state changes
+      if (this.isRedirecting) {
+        console.log('⚠️ Redirect in progress, skipping auth state handler');
+        return;
+      }
+
       await this.handleAuthStateChange(event, session);
       
       // Notify listeners
       this.authStateListeners.forEach(listener => {
-        listener(event, session, this.userRole);
+        try {
+          listener(event, session, this.userRole);
+        } catch (error) {
+          console.error('Auth state listener error:', error);
+        }
       });
     });
     
@@ -146,56 +185,72 @@ class NikoPIM {
   }
 
   async handleAuthStateChange(event, session) {
-    switch (event) {
-      case 'SIGNED_IN':
-        this.currentUser = session.user;
-        await this.determineUserRole(session.user);
-        this.redirectToDashboard();
-        break;
-        
-      case 'SIGNED_OUT':
-        this.currentUser = null;
-        this.userRole = null;
-        this.redirectToLogin();
-        break;
-        
-      case 'TOKEN_REFRESHED':
-        // Token was refreshed, user is still authenticated
-        console.log('Token refreshed for user:', session.user.email);
-        break;
-        
-      case 'USER_UPDATED':
-        // User metadata was updated
-        if (session.user) {
+    try {
+      switch (event) {
+        case 'SIGNED_IN':
           this.currentUser = session.user;
           await this.determineUserRole(session.user);
-        }
-        break;
+          
+          // Only redirect if not on auth page
+          if (!this.isSignupOrLoginPage()) {
+            this.redirectToDashboard();
+          }
+          break;
+          
+        case 'SIGNED_OUT':
+          this.currentUser = null;
+          this.userRole = null;
+          this.redirectToLogin();
+          break;
+          
+        case 'TOKEN_REFRESHED':
+          // Token was refreshed, user is still authenticated
+          console.log('Token refreshed for user:', session.user.email);
+          break;
+          
+        case 'USER_UPDATED':
+          // User metadata was updated
+          if (session.user) {
+            this.currentUser = session.user;
+            await this.determineUserRole(session.user);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('Auth state change handler error:', error);
     }
   }
 
   redirectToLogin() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || this.isRedirecting) return;
     
     const currentPath = window.location.pathname;
     const loginPath = CONFIG.ROUTES.LOGIN;
     
-    // Only redirect if not already on login page or test page
-    if (currentPath !== loginPath && !currentPath.includes('test-auth')) {
+    // Only redirect if not already on login/auth page
+    if (currentPath !== loginPath && !this.isSignupOrLoginPage()) {
       console.log('Redirecting to login');
-      window.location.href = loginPath;
+      this.isRedirecting = true;
+      
+      setTimeout(() => {
+        window.location.href = loginPath;
+      }, 500);
     }
   }
 
   // Auth functions with improved error handling and backward compatibility
   async register(email, password, name, userType) {
+    console.log('📝 Registration attempt:', { email, userType });
+    
     if (!this.isInitialized) {
       console.warn('NikoPIM not fully initialized, using legacy mode');
       return await registerUserLegacy(email, password, name, userType);
     }
     
     try {
-      return await registerUser(this.supabase, email, password, name, userType);
+      const result = await registerUser(this.supabase, email, password, name, userType);
+      console.log('✅ Registration result:', result);
+      return result;
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -203,13 +258,17 @@ class NikoPIM {
   }
 
   async login(email, password) {
+    console.log('🔐 Login attempt:', { email });
+    
     if (!this.isInitialized) {
       console.warn('NikoPIM not fully initialized, using legacy mode');
       return await loginUserLegacy(email, password);
     }
     
     try {
-      return await loginUser(this.supabase, email, password);
+      const result = await loginUser(this.supabase, email, password);
+      console.log('✅ Login result:', result);
+      return result;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -217,13 +276,17 @@ class NikoPIM {
   }
 
   async logout() {
+    console.log('🚪 Logout attempt');
+    
     if (!this.isInitialized) {
       console.warn('NikoPIM not fully initialized, using legacy mode');
       return await logoutUserLegacy();
     }
     
     try {
-      return await logoutUser(this.supabase);
+      const result = await logoutUser(this.supabase);
+      console.log('✅ Logout result:', result);
+      return result;
     } catch (error) {
       console.error('Logout failed:', error);
       throw error;
@@ -262,11 +325,14 @@ class NikoPIM {
     }
     this.authStateListeners = [];
     this.isInitialized = false;
+    this.isRedirecting = false;
   }
 }
 
-// Auto-initialize when DOM is ready
-if (typeof window !== 'undefined') {
+// Prevent multiple initializations
+if (typeof window !== 'undefined' && !window.NikoPIMInitialized) {
+  window.NikoPIMInitialized = true;
+  
   const nikoPIM = new NikoPIM();
   window.NikoPIM = nikoPIM;
   
@@ -292,7 +358,7 @@ if (typeof window !== 'undefined') {
       window.NikoPIM.getCurrentUser = () => nikoPIM.getCurrentUser();
       window.NikoPIM.onAuthStateChange = (callback) => nikoPIM.onAuthStateChange(callback);
       
-      // Legacy methods for backward compatibility (direct function calls)
+      // Legacy methods for backward compatibility
       window.NikoPIM.registerLegacy = registerUserLegacy;
       window.NikoPIM.loginLegacy = loginUserLegacy;
       window.NikoPIM.logoutLegacy = logoutUserLegacy;
