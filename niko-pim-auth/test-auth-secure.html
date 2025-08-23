@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Niko PIM Auth Test - Secure Version</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        input, select, button { 
+            margin: 5px; 
+            padding: 10px; 
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #005a87;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result { 
+            margin: 10px 0; 
+            padding: 10px; 
+            background: #f8f9fa;
+            border-left: 4px solid #007cba;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .disabled { 
+            opacity: 0.5; 
+            pointer-events: none; 
+        }
+        .status {
+            padding: 10px;
+            text-align: center;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .status.loading {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status.ready {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .env-warning {
+            background-color: #ffeaa7;
+            border: 1px solid #fdcb6e;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .current-user {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Niko PIM Authentication Test</h1>
+        
+        <div class="env-warning">
+            <strong>⚠️ Testing Environment</strong><br>
+            This is a secure test environment. Make sure you have:
+            <ol>
+                <li>Created a <code>.env.local</code> file with your credentials</li>
+                <li>Built the project with <code>npm run build:dev</code></li>
+                <li>Using test/development Supabase credentials (not production)</li>
+            </ol>
+        </div>
+        
+        <div id="init-status" class="status loading">Initializing Niko PIM...</div>
+        
+        <div id="current-user-info" class="current-user" style="display: none;">
+            <h4>Current User Status</h4>
+            <div id="user-details"></div>
+        </div>
+        
+        <div id="test-sections" class="disabled">
+            <div class="section">
+                <h3>🆕 Register New User</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: end;">
+                    <div>
+                        <label>Email:</label><br>
+                        <input type="email" id="reg-email" placeholder="test@example.com" value="test@example.com">
+                    </div>
+                    <div>
+                        <label>Password:</label><br>
+                        <input type="password" id="reg-password" placeholder="Password" value="Test123456!">
+                    </div>
+                    <div>
+                        <label>Name:</label><br>
+                        <input type="text" id="reg-name" placeholder="Full Name" value="Test User">
+                    </div>
+                    <div>
+                        <label>User Type:</label><br>
+                        <select id="reg-type">
+                            <option value="Customer">Customer</option>
+                            <option value="Retailer">Retailer</option>
+                        </select>
+                    </div>
+                    <button onclick="testRegister()">Register</button>
+                </div>
+                <div id="reg-result" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h3>🔑 User Login</h3>
+                <div style="display: flex; gap: 10px; align-items: end;">
+                    <div>
+                        <label>Email:</label><br>
+                        <input type="email" id="login-email" placeholder="Email" value="test@example.com">
+                    </div>
+                    <div>
+                        <label>Password:</label><br>
+                        <input type="password" id="login-password" placeholder="Password" value="Test123456!">
+                    </div>
+                    <button onclick="testLogin()">Login</button>
+                </div>
+                <div id="login-result" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h3>🚪 User Logout</h3>
+                <button onclick="testLogout()">Logout Current User</button>
+                <div id="logout-result" class="result"></div>
+            </div>
+            
+            <div class="section">
+                <h3>ℹ️ User Info & Status</h3>
+                <button onclick="checkUserStatus()">Check Current Status</button>
+                <div id="status-result" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the built bundle -->
+    <script src="dist/niko-pim.js"></script>
+    <script>
+        let nikoPIMReady = false;
+        
+        // Wait for NikoPIM to initialize
+        function waitForInit() {
+            if (window.NikoPIM && window.NikoPIM.isAuthenticated) {
+                nikoPIMReady = true;
+                document.getElementById('init-status').innerHTML = '✅ Niko PIM Ready for Testing';
+                document.getElementById('init-status').className = 'status ready';
+                document.getElementById('test-sections').classList.remove('disabled');
+                
+                // Setup auth state listener
+                window.NikoPIM.onAuthStateChange((event, session, userRole) => {
+                    updateUserInfo(session?.user, userRole);
+                    console.log('Auth state changed:', event, userRole);
+                });
+                
+                // Check initial auth state
+                checkUserStatus();
+            } else {
+                // Retry after 100ms
+                setTimeout(waitForInit, 100);
+            }
+        }
+        
+        function updateUserInfo(user, role) {
+            const userInfoDiv = document.getElementById('current-user-info');
+            const userDetailsDiv = document.getElementById('user-details');
+            
+            if (user) {
+                userInfoDiv.style.display = 'block';
+                userDetailsDiv.innerHTML = `
+                    <strong>Authenticated:</strong> ✅ Yes<br>
+                    <strong>Email:</strong> ${user.email}<br>
+                    <strong>Role:</strong> ${role || 'Unknown'}<br>
+                    <strong>User ID:</strong> ${user.id}<br>
+                    <strong>Created:</strong> ${new Date(user.created_at).toLocaleString()}
+                `;
+            } else {
+                userInfoDiv.style.display = 'block';
+                userDetailsDiv.innerHTML = '<strong>Authenticated:</strong> ❌ No user logged in';
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', waitForInit);
+        
+        async function testRegister() {
+            if (!nikoPIMReady) {
+                showResult('reg-result', '❌ NikoPIM not ready', 'error');
+                return;
+            }
+            
+            try {
+                const email = document.getElementById('reg-email').value;
+                const password = document.getElementById('reg-password').value;
+                const name = document.getElementById('reg-name').value;
+                const userType = document.getElementById('reg-type').value;
+                
+                if (!email || !password || !name) {
+                    throw new Error('Please fill in all fields');
+                }
+                
+                console.log('Attempting registration...');
+                const result = await window.NikoPIM.register(email, password, name, userType);
+                showResult('reg-result', `✅ Registration successful:\\n${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                console.error('Registration error:', error);
+                showResult('reg-result', `❌ Registration failed:\\n${error.message}`, 'error');
+            }
+        }
+        
+        async function testLogin() {
+            if (!nikoPIMReady) {
+                showResult('login-result', '❌ NikoPIM not ready', 'error');
+                return;
+            }
+            
+            try {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                
+                if (!email || !password) {
+                    throw new Error('Please enter email and password');
+                }
+                
+                console.log('Attempting login...');
+                const result = await window.NikoPIM.login(email, password);
+                showResult('login-result', `✅ Login successful:\\n${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                console.error('Login error:', error);
+                showResult('login-result', `❌ Login failed:\\n${error.message}`, 'error');
+            }
+        }
+        
+        async function testLogout() {
+            if (!nikoPIMReady) {
+                showResult('logout-result', '❌ NikoPIM not ready', 'error');
+                return;
+            }
+            
+            try {
+                console.log('Attempting logout...');
+                const result = await window.NikoPIM.logout();
+                showResult('logout-result', `✅ Logout successful:\\n${JSON.stringify(result, null, 2)}`, 'success');
+            } catch (error) {
+                console.error('Logout error:', error);
+                showResult('logout-result', `❌ Logout failed:\\n${error.message}`, 'error');
+            }
+        }
+        
+        function checkUserStatus() {
+            if (!nikoPIMReady) {
+                showResult('status-result', '❌ NikoPIM not ready', 'error');
+                return;
+            }
+            
+            try {
+                const isAuth = window.NikoPIM.isAuthenticated();
+                const user = window.NikoPIM.getCurrentUser();
+                const role = window.NikoPIM.getUserRole();
+                
+                const status = {
+                    authenticated: isAuth,
+                    user: user ? {
+                        id: user.id,
+                        email: user.email,
+                        created_at: user.created_at
+                    } : null,
+                    role: role,
+                    timestamp: new Date().toISOString()
+                };
+                
+                updateUserInfo(user, role);
+                showResult('status-result', `Current Status:\\n${JSON.stringify(status, null, 2)}`, isAuth ? 'success' : '');
+            } catch (error) {
+                showResult('status-result', `❌ Status check failed:\\n${error.message}`, 'error');
+            }
+        }
+        
+        function showResult(elementId, message, type = '') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${type}`;
+        }
+        
+        // Global error handler
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            const statusDiv = document.getElementById('init-status');
+            statusDiv.innerHTML = `❌ Error: ${event.error.message}`;
+            statusDiv.className = 'status error';
+        });
+    </script>
+</body>
+</html>
