@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple NikoPIM Debug Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Simple Registration Test</h1>
+    <div id="status">Testing...</div>
+    
+    <form id="testForm">
+        <input type="text" id="name" placeholder="Name" value="Test User">
+        <input type="email" id="email" placeholder="Email" value="test@example.com">
+        <input type="password" id="password" placeholder="Password" value="password123">
+        <button type="submit">Test Register</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <script>
+        console.log('🔍 Starting simple debug test...');
+        
+        // Test direct Supabase connection without NikoPIM wrapper
+        const supabaseUrl = 'https://bzjoxjqfpmjhbfijthpp.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6am94anFmcG1qaGJmaWp0aHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQ0MDUyMjQsImV4cCI6MjAzOTk4MTIyNH0.p5eJJqvF_HhMAVkqpvpWp7Gqy2qEFnq6MfI_kD8DfJQ';
+        
+        try {
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            document.getElementById('status').textContent = '✅ Supabase client created';
+            console.log('✅ Supabase client created successfully');
+            
+            document.getElementById('testForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                console.log('🔄 Attempting registration...');
+                document.getElementById('result').textContent = 'Registering...';
+                
+                try {
+                    const { data, error } = await supabase.auth.signUp({
+                        email: email,
+                        password: password,
+                        options: {
+                            data: {
+                                name: name,
+                                user_type: 'Customer'
+                            }
+                        }
+                    });
+                    
+                    if (error) {
+                        console.error('❌ Registration error:', error);
+                        document.getElementById('result').textContent = '❌ Error: ' + error.message;
+                    } else {
+                        console.log('✅ Registration successful:', data);
+                        document.getElementById('result').textContent = '✅ Registration successful! User ID: ' + data.user.id;
+                    }
+                } catch (err) {
+                    console.error('❌ Registration failed:', err);
+                    document.getElementById('result').textContent = '❌ Registration failed: ' + err.message;
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Failed to create Supabase client:', error);
+            document.getElementById('status').textContent = '❌ Failed to create Supabase client: ' + error.message;
+        }
+    </script>
+</body>
+</html>
