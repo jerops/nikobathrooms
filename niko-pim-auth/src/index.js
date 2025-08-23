@@ -1,8 +1,8 @@
 import { CONFIG, USER_ROLES, validateEnvironment } from './config/constants.js';
 import { initializeSupabase } from './api/supabase-client.js';
-import { registerUser } from './auth/registration.js';
-import { loginUser } from './auth/login.js';
-import { logoutUser } from './auth/logout.js';
+import { registerUser, registerUserLegacy } from './auth/registration.js';
+import { loginUser, loginUserLegacy } from './auth/login.js';
+import { logoutUser, logoutUserLegacy } from './auth/logout.js';
 
 class NikoPIM {
   constructor() {
@@ -75,6 +75,11 @@ class NikoPIM {
         return;
       }
       
+      if (userMetadata.user_type) {
+        this.userRole = userMetadata.user_type;
+        return;
+      }
+      
       // Check app_metadata (set by admin/backend)
       if (appMetadata.role) {
         this.userRole = appMetadata.role;
@@ -119,7 +124,7 @@ class NikoPIM {
     }
     
     // Only redirect if not already on the target path
-    if (currentPath !== targetPath) {
+    if (currentPath !== targetPath && !currentPath.includes('test-auth')) {
       console.log(`Redirecting to dashboard: ${targetPath}`);
       window.location.href = targetPath;
     }
@@ -175,17 +180,18 @@ class NikoPIM {
     const currentPath = window.location.pathname;
     const loginPath = CONFIG.ROUTES.LOGIN;
     
-    // Only redirect if not already on login page
-    if (currentPath !== loginPath) {
+    // Only redirect if not already on login page or test page
+    if (currentPath !== loginPath && !currentPath.includes('test-auth')) {
       console.log('Redirecting to login');
       window.location.href = loginPath;
     }
   }
 
-  // Auth functions with improved error handling
+  // Auth functions with improved error handling and backward compatibility
   async register(email, password, name, userType) {
     if (!this.isInitialized) {
-      throw new Error('NikoPIM not initialized. Call init() first.');
+      console.warn('NikoPIM not fully initialized, using legacy mode');
+      return await registerUserLegacy(email, password, name, userType);
     }
     
     try {
@@ -198,7 +204,8 @@ class NikoPIM {
 
   async login(email, password) {
     if (!this.isInitialized) {
-      throw new Error('NikoPIM not initialized. Call init() first.');
+      console.warn('NikoPIM not fully initialized, using legacy mode');
+      return await loginUserLegacy(email, password);
     }
     
     try {
@@ -211,7 +218,8 @@ class NikoPIM {
 
   async logout() {
     if (!this.isInitialized) {
-      throw new Error('NikoPIM not initialized. Call init() first.');
+      console.warn('NikoPIM not fully initialized, using legacy mode');
+      return await logoutUserLegacy();
     }
     
     try {
@@ -284,9 +292,21 @@ if (typeof window !== 'undefined') {
       window.NikoPIM.getCurrentUser = () => nikoPIM.getCurrentUser();
       window.NikoPIM.onAuthStateChange = (callback) => nikoPIM.onAuthStateChange(callback);
       
-      console.log('✅ NikoPIM methods exposed globally');
+      // Legacy methods for backward compatibility (direct function calls)
+      window.NikoPIM.registerLegacy = registerUserLegacy;
+      window.NikoPIM.loginLegacy = loginUserLegacy;
+      window.NikoPIM.logoutLegacy = logoutUserLegacy;
+      
+      console.log('✅ NikoPIM methods exposed globally (with legacy support)');
     }).catch(error => {
       console.error('❌ Failed to initialize NikoPIM:', error);
+      
+      // If initialization fails, still expose legacy methods
+      window.NikoPIM.register = registerUserLegacy;
+      window.NikoPIM.login = loginUserLegacy;
+      window.NikoPIM.logout = logoutUserLegacy;
+      
+      console.log('⚠️ NikoPIM initialized in legacy mode');
     });
   };
 
