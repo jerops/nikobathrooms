@@ -1,9 +1,13 @@
-/*document.addEventListener('DOMContentLoaded', function() {
+// Browser-compatible signup form handlers
+// This file provides the signup functionality that works directly in browsers
+
+document.addEventListener('DOMContentLoaded', function() {
     function waitForNikoPIM() {
       if (window.NikoPIM && window.NikoPIM.register) {
         setupSignupForms();
         setupPasswordValidation();
         setupPasswordToggle();
+        console.log('✅ Signup handlers ready');
       } else {
         setTimeout(waitForNikoPIM, 100);
       }
@@ -95,12 +99,27 @@
       const email = document.getElementById('customer-email-input').value;
       const password = document.getElementById('customer-password-input').value;
       
-      const result = await window.NikoPIM.register(email, password, name, 'Customer');
+      // Show loading state
+      const submitBtn = e.target;
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Creating account...';
+      submitBtn.disabled = true;
       
-      if (result.success) {
-        window.location.href = getRedirectUrl('Customer');
-      } else {
-        showError('customer', result.error);
+      try {
+        const result = await window.NikoPIM.register(email, password, name, 'Customer');
+        
+        if (result.success) {
+          showSuccess('customer', 'Account created successfully! Redirecting...');
+          setTimeout(() => {
+            window.location.href = getRedirectUrl('Customer');
+          }, 1500);
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        showError('customer', error.message || 'Registration failed');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
       }
     }
     
@@ -113,12 +132,27 @@
       const email = document.getElementById('retailer-email-input').value;
       const password = document.getElementById('retailer-password-input').value;
       
-      const result = await window.NikoPIM.register(email, password, name, 'Retailer');
+      // Show loading state
+      const submitBtn = e.target;
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Creating account...';
+      submitBtn.disabled = true;
       
-      if (result.success) {
-        window.location.href = getRedirectUrl('Retailer');
-      } else {
-        showError('retailer', result.error);
+      try {
+        const result = await window.NikoPIM.register(email, password, name, 'Retailer');
+        
+        if (result.success) {
+          showSuccess('retailer', 'Account created successfully! Redirecting...');
+          setTimeout(() => {
+            window.location.href = getRedirectUrl('Retailer');
+          }, 1500);
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        showError('retailer', error.message || 'Registration failed');
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
       }
     }
     
@@ -127,6 +161,19 @@
       if (errorElement) {
         errorElement.textContent = message;
         errorElement.parentElement.parentElement.style.display = 'block';
+      } else {
+        console.error(`${userType} signup error:`, message);
+      }
+    }
+    
+    function showSuccess(userType, message) {
+      const errorElement = document.querySelector('.w--tab-active .error-text');
+      if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.color = '#4CAF50';
+        errorElement.parentElement.parentElement.style.display = 'block';
+      } else {
+        console.log(`${userType} signup success:`, message);
       }
     }
     
@@ -138,55 +185,4 @@
     }
     
     waitForNikoPIM();
-  });*/
-
-  import { getSupabase } from '../api/supabase-client.js';
-import { webflowClient } from '../api/webflow-client.js';
-import { USER_ROLES } from '../config/constants.js';
-
-export async function registerUser(email, password, name, userType) {
-  const supabase = getSupabase();
-  
-  try {
-    // Step 1: Validate retailer email if needed
-    if (userType === 'Retailer') {
-      const isValidRetailer = await webflowClient.validateRetailerEmail(email);
-      if (!isValidRetailer) {
-        throw new Error('Email not found in authorized retailers list');
-      }
-    }
-
-    // Step 2: Register with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name: name,
-          user_type: userType
-        }
-      }
-    });
-
-    if (authError) throw authError;
-
-    // Step 3: Create corresponding Webflow CMS entry
-    const userData = {
-      name,
-      email,
-      supabaseId: authData.user.id
-    };
-
-    if (userType === 'Customer') {
-      await webflowClient.createCustomer(userData);
-    } else {
-      await webflowClient.createRetailer(userData);
-    }
-
-    console.log('User created in both Supabase and Webflow CMS');
-    return { success: true, user: authData.user };
-  } catch (error) {
-    console.error('Registration failed:', error);
-    return { success: false, error: error.message };
-  }
-}
+  });
