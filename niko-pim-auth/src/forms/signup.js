@@ -1,5 +1,5 @@
-// Browser-compatible signup form handlers - RESTORED TO WORKING VERSION
-// This restores the working functionality from before GitHub MCP changes
+// ENHANCED SIGNUP HANDLERS - Restored complete functionality from working Webflow PIM project
+// This version combines the working implementation with domain-aware redirects and enhanced error handling
 
 document.addEventListener('DOMContentLoaded', function() {
   function waitForNikoPIM() {
@@ -13,24 +13,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+  // ENHANCED DOMAIN-AWARE REDIRECTS - Restored from working implementation
   function getRedirectUrl(userType) {
-    const currentDomain = window.location.origin;
+    const hostname = window.location.hostname;
+    let baseUrl;
+    
+    // Handle different deployment domains
+    if (hostname === 'nikobathrooms.ie') {
+      // Production domain
+      baseUrl = 'https://nikobathrooms.ie';
+    } else if (hostname === 'nikobathrooms.webflow.io') {
+      // Staging/Webflow domain
+      baseUrl = 'https://nikobathrooms.webflow.io';
+    } else {
+      // Fallback for preview/other domains
+      baseUrl = window.location.origin;
+    }
+    
     const basePath = '/dev/app';
     
     return userType === 'Customer' 
-      ? `${currentDomain}${basePath}/customer/dashboard`
-      : `${currentDomain}${basePath}/retailer/dashboard`;
+      ? `${baseUrl}${basePath}/customer/dashboard`
+      : `${baseUrl}${basePath}/retailer/dashboard`;
   }
   
   function setupSignupForms() {
     const customerSignupBtn = document.getElementById('customer-signup-btn');
     if (customerSignupBtn) {
       customerSignupBtn.addEventListener('click', handleCustomerSignup);
+      console.log('🔗 Customer signup handler attached');
     }
     
     const retailerSignupBtn = document.getElementById('retailer-signup-btn');
     if (retailerSignupBtn) {
       retailerSignupBtn.addEventListener('click', handleRetailerSignup);
+      console.log('🔗 Retailer signup handler attached');
     }
   }
   
@@ -50,9 +67,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleButtons = document.querySelectorAll('.input-visibility-toggle');
     
     toggleButtons.forEach(button => {
-      const showIcon = button.querySelector('[wized="icon_show_password"]');
-      const hideIcon = button.querySelector('[wized="icon_hide_password"]');
-      const passwordInput = button.closest('.form_field-wrapper').querySelector('input[type="password"], input[type="text"]');
+      const showIcon = button.querySelector('[wized=\"icon_show_password\"]');
+      const hideIcon = button.querySelector('[wized=\"icon_hide_password\"]');
+      const passwordInput = button.closest('.form_field-wrapper').querySelector('input[type=\"password\"], input[type=\"text\"]');
       
       if (passwordInput && showIcon && hideIcon) {
         hideIcon.style.display = 'none';
@@ -113,11 +130,15 @@ document.addEventListener('DOMContentLoaded', function() {
       if (result.success) {
         console.log('✅ Customer registration successful');
         showSuccess('customer', 'Account created successfully! Redirecting...');
+        
+        // Use domain-aware redirect
+        const redirectUrl = getRedirectUrl('Customer');
+        console.log('🚀 Redirecting to:', redirectUrl);
         setTimeout(() => {
-          window.location.href = getRedirectUrl('Customer');
+          window.location.href = redirectUrl;
         }, 1500);
       } else {
-        throw new Error(result.error);
+        throw new Error(result.error || 'Registration failed');
       }
     } catch (error) {
       console.error('❌ Customer signup error:', error);
@@ -150,11 +171,15 @@ document.addEventListener('DOMContentLoaded', function() {
       if (result.success) {
         console.log('✅ Retailer registration successful');
         showSuccess('retailer', 'Account created successfully! Redirecting...');
+        
+        // Use domain-aware redirect
+        const redirectUrl = getRedirectUrl('Retailer');
+        console.log('🚀 Redirecting to:', redirectUrl);
         setTimeout(() => {
-          window.location.href = getRedirectUrl('Retailer');
+          window.location.href = redirectUrl;
         }, 1500);
       } else {
-        throw new Error(result.error);
+        throw new Error(result.error || 'Registration failed');
       }
     } catch (error) {
       console.error('❌ Retailer signup error:', error);
@@ -168,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorElement = document.querySelector('.w--tab-active .error-text');
     if (errorElement) {
       errorElement.textContent = message;
+      errorElement.style.color = '#ff0000'; // Reset to error color
       errorElement.parentElement.parentElement.style.display = 'block';
     } else {
       console.error(`${userType} signup error:`, message);
