@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "build": "webpack --mode production",
+    "build:prod": "webpack --mode production",
     "build:dev": "webpack --mode development",
     "dev": "webpack --mode development --watch",
     "start": "webpack serve --mode development",
@@ -13,7 +14,8 @@
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
     "clean": "rm -rf dist/",
-    "validate-env": "node scripts/validate-env.js"
+    "validate-env": "node scripts/validate-env.js",
+    "deploy": "npm run clean && npm run build:prod && echo '✅ Build complete! Upload dist/niko-pim.min.js to CDN'"
   },
   "keywords": [
     "authentication",
