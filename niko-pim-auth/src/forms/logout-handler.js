@@ -1,38 +1,10 @@
-// LOGOUT HANDLER - RESTORED FROM WORKING REFERENCE POINT
-// This is based on your exact working script reference
+// RESTORED LOGOUT HANDLER
+// Fixed version with improved error handling and domain awareness
+
+console.log('🚪 Logout handler loading...');
 
 document.addEventListener('DOMContentLoaded', function() {
-  function waitForNikoPIM() {
-    if (window.NikoPIM && window.NikoPIM.logout) {
-      setupLogoutButtons();
-    } else {
-      setTimeout(waitForNikoPIM, 100);
-    }
-  }
-  
-  function setupLogoutButtons() {
-    const logoutButtons = document.querySelectorAll('[niko-data="logout"]');
+    console.log('📄 DOM loaded, setting up logout functionality...');
     
-    logoutButtons.forEach(button => {
-      button.addEventListener('click', handleLogout);
-    });
-  }
-  
-  async function handleLogout(e) {
-    e.preventDefault();
-    
-    try {
-      // Call logout but override the redirect
-      const result = await window.NikoPIM.logout();
-      
-      // Custom redirect using current domain - EXACT REFERENCE PATTERN
-      const currentDomain = window.location.origin;
-      window.location.href = `${currentDomain}/dev/app/auth/log-in`;
-      
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  }
-  
-  waitForNikoPIM();
-});
+    // Wait for NikoPIM to be available
+    function waitForNikoPIM() {\n        if (window.NikoPIM && typeof window.NikoPIM.logout === 'function') {\n            console.log('✅ NikoPIM available, setting up logout handlers');\n            setupLogoutButtons();\n        } else {\n            console.log('⏳ Waiting for NikoPIM...');\n            setTimeout(waitForNikoPIM, 100);\n        }\n    }\n    \n    // Also listen for the custom ready event\n    window.addEventListener('NikoPIMReady', function() {\n        console.log('🚀 NikoPIMReady event received');\n        setupLogoutButtons();\n    });\n    \n    function getLoginUrl() {\n        const currentDomain = window.location.origin;\n        const basePath = '/dev/app/auth';\n        return `${currentDomain}${basePath}/log-in`;\n    }\n    \n    function setupLogoutButtons() {\n        console.log('🔧 Setting up logout buttons...');\n        \n        // Find logout buttons using multiple selectors\n        const logoutSelectors = [\n            '[niko-data=\"logout\"]',\n            '[data-logout=\"true\"]',\n            '.logout-btn',\n            '.logout-button',\n            'button[data-action=\"logout\"]',\n            'a[href*=\"logout\"]'\n        ];\n        \n        let logoutButtons = [];\n        logoutSelectors.forEach(selector => {\n            const buttons = document.querySelectorAll(selector);\n            buttons.forEach(button => {\n                if (!logoutButtons.includes(button)) {\n                    logoutButtons.push(button);\n                }\n            });\n        });\n        \n        console.log(`🔍 Found ${logoutButtons.length} logout buttons`);\n        \n        logoutButtons.forEach((button, index) => {\n            console.log(`🔧 Setting up logout button ${index + 1}:`, button.tagName, button.textContent?.trim());\n            \n            // Remove any existing listeners to avoid duplicates\n            const newButton = button.cloneNode(true);\n            button.parentNode.replaceChild(newButton, button);\n            \n            // Add the click handler\n            newButton.addEventListener('click', handleLogout);\n            \n            console.log(`✅ Logout button ${index + 1} set up successfully`);\n        });\n        \n        if (logoutButtons.length === 0) {\n            console.log('⚠️ No logout buttons found. Will retry in 2 seconds...');\n            setTimeout(setupLogoutButtons, 2000);\n        }\n    }\n    \n    async function handleLogout(e) {\n        console.log('🚪 Logout triggered');\n        e.preventDefault();\n        e.stopPropagation();\n        \n        const button = e.target;\n        const originalText = button.textContent;\n        \n        try {\n            // Show loading state\n            button.textContent = 'Logging out...';\n            button.disabled = true;\n            button.style.opacity = '0.7';\n            \n            console.log('📤 Calling logout...');\n            const result = await window.NikoPIM.logout();\n            \n            if (result.success) {\n                console.log('✅ Logout successful');\n                \n                // Clear any cached data\n                try {\n                    localStorage.clear();\n                    sessionStorage.clear();\n                    console.log('🧹 Cache cleared');\n                } catch (clearError) {\n                    console.log('⚠️ Could not clear cache:', clearError);\n                }\n                \n                // Redirect to login page\n                const loginUrl = getLoginUrl();\n                console.log('🔄 Redirecting to:', loginUrl);\n                \n                // Use replace to prevent back button issues\n                window.location.replace(loginUrl);\n            } else {\n                throw new Error(result.error || 'Logout failed');\n            }\n        } catch (error) {\n            console.error('❌ Logout failed:', error);\n            \n            // Reset button state\n            button.textContent = originalText;\n            button.disabled = false;\n            button.style.opacity = '1';\n            \n            // Show error (optional)\n            alert('Logout failed. Please try again.');\n            \n            // Force redirect anyway for security\n            console.log('🔒 Force redirecting for security...');\n            setTimeout(() => {\n                const loginUrl = getLoginUrl();\n                window.location.replace(loginUrl);\n            }, 1000);\n        }\n    }\n    \n    // Also handle logout via URL parameter (for direct links)\n    function checkLogoutUrl() {\n        const urlParams = new URLSearchParams(window.location.search);\n        if (urlParams.get('action') === 'logout' || urlParams.get('logout') === 'true') {\n            console.log('🔗 Logout requested via URL');\n            handleLogout({ preventDefault: () => {}, stopPropagation: () => {}, target: { textContent: 'Logout', disabled: false, style: {} } });\n        }\n    }\n    \n    // Set up auth state monitoring\n    function monitorAuthState() {\n        if (window.NikoPIM && typeof window.NikoPIM.isAuthenticated === 'function') {\n            // Check auth state periodically\n            setInterval(() => {\n                if (!window.NikoPIM.isAuthenticated()) {\n                    console.log('🔍 User no longer authenticated, redirecting...');\n                    const loginUrl = getLoginUrl();\n                    window.location.replace(loginUrl);\n                }\n            }, 30000); // Check every 30 seconds\n        }\n    }\n    \n    // Start the initialization\n    console.log('🚀 Starting logout handler initialization...');\n    waitForNikoPIM();\n    checkLogoutUrl();\n    setTimeout(monitorAuthState, 5000); // Start monitoring after 5 seconds\n});\n\n// Also set up global logout function for direct calls\nif (typeof window !== 'undefined') {\n    window.nikoPIMLogout = async function() {\n        console.log('🔧 Direct logout call');\n        if (window.NikoPIM && typeof window.NikoPIM.logout === 'function') {\n            try {\n                const result = await window.NikoPIM.logout();\n                if (result.success) {\n                    const currentDomain = window.location.origin;\n                    window.location.replace(`${currentDomain}/dev/app/auth/log-in`);\n                }\n            } catch (error) {\n                console.error('Direct logout failed:', error);\n                // Force redirect anyway\n                const currentDomain = window.location.origin;\n                window.location.replace(`${currentDomain}/dev/app/auth/log-in`);\n            }\n        }\n    };\n}\n\nconsole.log('✅ Logout handler loaded');
