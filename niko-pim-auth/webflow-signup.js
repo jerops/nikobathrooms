@@ -1,10 +1,16 @@
 /* 
- * STANDALONE WEBFLOW SIGNUP SCRIPT
+ * STANDALONE WEBFLOW SIGNUP SCRIPT - FIXED VERSION
  * Place this in your signup page's custom code section
  * No bundling required - works directly in Webflow
+ * 
+ * FIXES:
+ * - Better Supabase loading with error handling
+ * - Multiple button detection methods
+ * - Enhanced debugging
+ * - Improved element finding
  */
 
-console.log('📝 Standalone Webflow Signup Script Loading...');
+console.log('📝 Fixed Webflow Signup Script Loading...');
 
 (function() {
     'use strict';
@@ -13,169 +19,286 @@ console.log('📝 Standalone Webflow Signup Script Loading...');
     const SUPABASE_URL = 'https://bzjoxjqfpmjhbfijthpp.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6am94anFmcG1qaGJmaWp0aHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NjIyMzksImV4cCI6MjA3MTMzODIzOX0.sL9omeLIgpgqYjTJM6SGQPSvUvm5z-Yr9rOzkOi2mJk';
     
-    // Load Supabase if not already loaded
+    // Load Supabase with better error handling
     function loadSupabase() {
         return new Promise((resolve) => {
             if (window.supabase) {
-                resolve();
+                console.log('✅ Supabase already available');
+                resolve(true);
                 return;
             }
             
+            console.log('📦 Loading Supabase from CDN...');
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-            script.onload = resolve;
+            script.onload = () => {
+                console.log('✅ Supabase loaded successfully');
+                // Wait a moment for it to initialize
+                setTimeout(() => resolve(true), 100);
+            };
+            script.onerror = (error) => {
+                console.error('❌ Failed to load Supabase:', error);
+                resolve(false);
+            };
             document.head.appendChild(script);
         });
     }
     
     // Initialize when DOM is ready
-    function init() {
+    async function init() {
         console.log('🚀 Initializing Webflow Signup...');
         
-        loadSupabase().then(() => {
-            const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log('✅ Supabase client ready');
-            
-            setupSignupHandlers(supabaseClient);
-        });
+        // Load Supabase first
+        const supabaseLoaded = await loadSupabase();
+        if (!supabaseLoaded) {
+            console.error('❌ Cannot proceed without Supabase');
+            return;
+        }
+        
+        // Wait for DOM to be fully ready
+        setTimeout(() => {
+            setupSignupHandlers();
+        }, 1000);
     }
     
-    function setupSignupHandlers(supabaseClient) {
+    function setupSignupHandlers() {
         console.log('🔧 Setting up signup handlers...');
         
-        // Customer signup button
-        const customerBtn = document.getElementById('customer-signup-btn');
-        if (customerBtn) {
-            console.log('✅ Found customer signup button');
-            customerBtn.addEventListener('click', (e) => handleSignup(e, supabaseClient, 'customer', 'Customer'));
+        // Enhanced element finding with debugging
+        debugFormElements();
+        
+        // Find form elements with multiple fallback methods
+        const formElements = findFormElements();
+        
+        // Set up handlers based on what we found
+        if (formElements.customerButton) {
+            console.log('✅ Setting up customer signup handler');
+            setupCustomerSignup(formElements);
         }
         
-        // Retailer signup button
-        const retailerBtn = document.getElementById('retailer-signup-btn');
-        if (retailerBtn) {
-            console.log('✅ Found retailer signup button');
-            retailerBtn.addEventListener('click', (e) => handleSignup(e, supabaseClient, 'retailer', 'Retailer'));
+        if (formElements.retailerButton) {
+            console.log('✅ Setting up retailer signup handler');
+            setupRetailerSignup(formElements);
         }
         
-        // Generic form submission
-        const signupForms = document.querySelectorAll('form[data-name*=\"Signup\"], .signup-form, form.signup-form');
-        signupForms.forEach(form => {
-            console.log('✅ Found signup form');
-            form.addEventListener('submit', (e) => handleFormSignup(e, supabaseClient));
-        });
+        // Generic form fallback
+        if (!formElements.customerButton && !formElements.retailerButton) {
+            console.log('🔄 Setting up generic form handlers');
+            setupGenericForms();
+        }
         
-        // Setup password validation and toggles
-        setupPasswordValidation();
+        // Setup password features
+        setupPasswordValidation(formElements);
         setupPasswordToggles();
     }
     
-    async function handleSignup(e, supabaseClient, userType, userRole) {
-        e.preventDefault();
-        console.log(`📝 ${userType} signup triggered`);
+    function debugFormElements() {
+        console.log('🔍 Debugging form elements...');
         
-        const nameInput = document.getElementById(`${userType}-name-input`);
-        const emailInput = document.getElementById(`${userType}-email-input`);
-        const passwordInput = document.getElementById(`${userType}-password-input`);
-        const confirmInput = document.getElementById(`${userType}-confirm-password-input`);
+        // Show all inputs
+        const allInputs = document.querySelectorAll('input');
+        console.log(`📝 Found ${allInputs.length} inputs:`);
+        allInputs.forEach((input, i) => {
+            console.log(`  ${i + 1}. ID: "${input.id}" | Type: "${input.type}" | Placeholder: "${input.placeholder}"`);
+        });
         
-        if (!nameInput || !emailInput || !passwordInput) {
-            console.error('❌ Signup inputs not found');
-            return;
-        }
-        
-        const name = nameInput.value.trim();
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-        const confirmPassword = confirmInput?.value || '';
-        
-        // Validation
-        if (!name || !email || !password) {
-            showError('Please fill in all required fields');
-            return;
-        }
-        
-        if (password.length < 6) {
-            showError('Password must be at least 6 characters long');
-            return;
-        }
-        
-        if (confirmInput && password !== confirmPassword) {
-            showError('Passwords do not match');
-            return;
-        }
-        
-        showLoading(e.target, true);
-        hideError();
-        
-        try {
-            const { data, error } = await supabaseClient.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        name,
-                        user_type: userRole,
-                        role: userRole
-                    }
-                }
-            });
-            
-            if (error) throw error;
-            
-            console.log('✅ Signup successful:', data.user?.email);
-            
-            // Show success message
-            showSuccess('Registration successful! Please check your email to confirm your account.');
-            
-            // Redirect after delay
-            setTimeout(() => {
-                const redirectUrl = getRedirectUrl(userRole);
-                console.log('🔄 Redirecting to:', redirectUrl);
-                window.location.href = redirectUrl;
-            }, 2000);
-            
-        } catch (error) {
-            console.error('❌ Signup failed:', error);
-            showError(error.message || 'Registration failed. Please try again.');
-        } finally {
-            showLoading(e.target, false);
-        }
+        // Show all buttons
+        const allButtons = document.querySelectorAll('button, input[type="submit"], .w-button');
+        console.log(`🔘 Found ${allButtons.length} buttons:`);
+        allButtons.forEach((button, i) => {
+            console.log(`  ${i + 1}. ID: "${button.id}" | Text: "${button.textContent?.trim()}" | Class: "${button.className}"`);
+        });
     }
     
-    async function handleFormSignup(e, supabaseClient) {
-        e.preventDefault();
-        console.log('📝 Form signup triggered');
+    function findFormElements() {
+        console.log('🎯 Finding form elements...');
         
-        const form = e.target;
-        const name = form.querySelector('input[name*=\"name\"], input[placeholder*=\"name\" i]')?.value?.trim();
-        const email = form.querySelector('input[type=\"email\"]')?.value?.trim();
-        const password = form.querySelector('input[type=\"password\"]:not([name*=\"confirm\"])')?.value;
-        const confirmPassword = form.querySelector('input[type=\"password\"][name*=\"confirm\"], input[type=\"password\"][placeholder*=\"confirm\" i]')?.value;
+        const elements = {
+            // Customer elements
+            customerName: document.getElementById('customer-name-input') || 
+                         document.querySelector('input[placeholder*="name" i]') ||
+                         document.querySelector('input[type="text"]:first-of-type'),
+                         
+            customerEmail: document.getElementById('customer-email-input') ||
+                          document.querySelector('input[type="email"]:first-of-type'),
+                          
+            customerPassword: document.getElementById('customer-password-input') ||
+                             document.querySelector('input[type="password"]:first-of-type'),
+                             
+            customerConfirm: document.getElementById('customer-confirm-password-input') ||
+                            document.querySelector('input[placeholder*="confirm" i]') ||
+                            document.querySelectorAll('input[type="password"]')[1],
+                            
+            customerButton: document.getElementById('customer-signup-btn') ||
+                           findSignupButton('customer'),
+            
+            // Retailer elements (if separate form)
+            retailerName: document.getElementById('retailer-name-input'),
+            retailerEmail: document.getElementById('retailer-email-input'),
+            retailerPassword: document.getElementById('retailer-password-input'),
+            retailerConfirm: document.getElementById('retailer-confirm-password-input'),
+            retailerButton: document.getElementById('retailer-signup-btn') ||
+                           findSignupButton('retailer')
+        };
         
-        // Determine user type
-        const userType = form.dataset.userType || form.getAttribute('data-user-type') || 'Customer';
+        console.log('📋 Element detection results:');
+        Object.entries(elements).forEach(([key, element]) => {
+            console.log(`  ${key}: ${element ? '✅ Found' : '❌ Not found'}`);
+        });
         
-        // Validation
-        if (!name || !email || !password) {
-            showError('Please fill in all required fields');
-            return;
+        return elements;
+    }
+    
+    function findSignupButton(userType = '') {
+        const selectors = [
+            `#${userType}-signup-btn`,
+            `button[data-user="${userType}"]`,
+            'button[type="submit"]',
+            'input[type="submit"]',
+            '.w-button',
+            'button:contains("Sign up")',
+            'button:contains("Sign Up")',
+            'button:contains("Register")',
+            'button:last-of-type'
+        ];
+        
+        for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+                console.log(`🎯 Found ${userType} button using selector: ${selector}`);
+                return element;
+            }
         }
         
-        if (password.length < 6) {
-            showError('Password must be at least 6 characters long');
-            return;
-        }
+        console.log(`⚠️ No ${userType} button found with any selector`);
+        return null;
+    }
+    
+    function setupCustomerSignup(elements) {
+        if (!elements.customerButton) return;
         
-        if (confirmPassword && password !== confirmPassword) {
-            showError('Passwords do not match');
-            return;
-        }
+        // Remove existing handlers
+        const newButton = elements.customerButton.cloneNode(true);
+        elements.customerButton.parentNode.replaceChild(newButton, elements.customerButton);
         
-        const submitBtn = form.querySelector('button[type=\"submit\"], input[type=\"submit\"]');
-        showLoading(submitBtn, true);
-        hideError();
+        newButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('👤 Customer signup triggered');
+            await handleSignup(e, 'Customer', {
+                name: elements.customerName,
+                email: elements.customerEmail,
+                password: elements.customerPassword,
+                confirm: elements.customerConfirm
+            });
+        });
+        
+        console.log('✅ Customer signup handler attached');
+    }
+    
+    function setupRetailerSignup(elements) {
+        if (!elements.retailerButton) return;
+        
+        const newButton = elements.retailerButton.cloneNode(true);
+        elements.retailerButton.parentNode.replaceChild(newButton, elements.retailerButton);
+        
+        newButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('🏪 Retailer signup triggered');
+            await handleSignup(e, 'Retailer', {
+                name: elements.retailerName,
+                email: elements.retailerEmail,
+                password: elements.retailerPassword,
+                confirm: elements.retailerConfirm
+            });
+        });
+        
+        console.log('✅ Retailer signup handler attached');
+    }
+    
+    function setupGenericForms() {
+        const forms = document.querySelectorAll('form, .signup-form');
+        
+        forms.forEach((form, index) => {
+            console.log(`🔧 Setting up generic form ${index + 1}`);
+            
+            const submitBtn = form.querySelector('button[type="submit"], input[type="submit"], .w-button');
+            if (submitBtn) {
+                const newButton = submitBtn.cloneNode(true);
+                submitBtn.parentNode.replaceChild(newButton, submitBtn);
+                
+                newButton.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log(`📝 Generic form ${index + 1} submitted`);
+                    
+                    const elements = {
+                        name: form.querySelector('input[type="text"], input[placeholder*="name" i]'),
+                        email: form.querySelector('input[type="email"]'),
+                        password: form.querySelector('input[type="password"]:not([placeholder*="confirm" i])'),
+                        confirm: form.querySelector('input[placeholder*="confirm" i]') || form.querySelectorAll('input[type="password"]')[1]
+                    };
+                    
+                    const userType = form.dataset.userType || form.getAttribute('data-user-type') || 'Customer';
+                    await handleSignup(e, userType, elements);
+                });
+            }
+        });
+    }
+    
+    async function handleSignup(e, userType, elements) {
+        console.log(`📝 Processing ${userType} signup...`);
+        
+        const button = e.target;
+        const originalText = button.textContent;
         
         try {
+            // Show loading
+            button.textContent = 'Creating account...';
+            button.disabled = true;
+            button.style.opacity = '0.7';
+            
+            // Get values
+            const name = elements.name?.value?.trim();
+            const email = elements.email?.value?.trim();
+            const password = elements.password?.value;
+            const confirmPassword = elements.confirm?.value;
+            
+            console.log('📋 Form values:', {
+                name: name || 'missing',
+                email: email || 'missing',
+                password: password ? 'provided' : 'missing',
+                confirm: confirmPassword ? 'provided' : 'not required'
+            });
+            
+            // Validation
+            if (!name || !email || !password) {
+                throw new Error('Please fill in all required fields');
+            }
+            
+            if (password.length < 6) {
+                throw new Error('Password must be at least 6 characters long');
+            }
+            
+            if (elements.confirm && password !== confirmPassword) {
+                throw new Error('Passwords do not match');
+            }
+            
+            // Create Supabase client
+            if (!window.supabase) {
+                throw new Error('Supabase not available');
+            }
+            
+            const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('🔗 Supabase client created');
+            
+            // Attempt signup
+            console.log(`📤 Attempting ${userType} signup for:`, email);
+            
             const { data, error } = await supabaseClient.auth.signUp({
                 email,
                 password,
@@ -188,41 +311,197 @@ console.log('📝 Standalone Webflow Signup Script Loading...');
                 }
             });
             
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Signup error:', error);
+                throw error;
+            }
             
-            console.log('✅ Form signup successful:', data.user?.email);
+            console.log('✅ Signup successful:', data.user?.email);
             
+            // Show success
             showSuccess('Registration successful! Please check your email to confirm your account.');
             
+            // Redirect after delay
             setTimeout(() => {
                 const redirectUrl = getRedirectUrl(userType);
+                console.log('🔄 Redirecting to:', redirectUrl);
                 window.location.href = redirectUrl;
-            }, 2000);
+            }, 3000);
             
         } catch (error) {
-            console.error('❌ Form signup failed:', error);
+            console.error('❌ Signup failed:', error);
             showError(error.message || 'Registration failed. Please try again.');
         } finally {
-            showLoading(submitBtn, false);
+            // Reset button
+            button.textContent = originalText;
+            button.disabled = false;
+            button.style.opacity = '1';
         }
     }
     
-    function setupPasswordValidation() {
+    function setupPasswordValidation(elements) {
         console.log('🔒 Setting up password validation...');
         
-        // Customer password validation
-        const customerConfirm = document.getElementById('customer-confirm-password-input');
-        if (customerConfirm) {
-            customerConfirm.addEventListener('input', () => validatePasswordMatch('customer'));
-            customerConfirm.addEventListener('blur', () => validatePasswordMatch('customer'));
+        const passwordInputs = [elements.customerPassword, elements.retailerPassword].filter(Boolean);
+        const confirmInputs = [elements.customerConfirm, elements.retailerConfirm].filter(Boolean);
+        
+        // Password strength validation
+        passwordInputs.forEach((input, index) => {
+            if (input) {
+                console.log(`🔧 Adding password strength validation ${index + 1}`);
+                input.addEventListener('input', function(e) {
+                    const password = e.target.value;
+                    e.target.style.borderColor = '';
+                    
+                    if (password.length > 0) {
+                        if (password.length < 6) {
+                            e.target.style.borderColor = '#ff6b6b';
+                        } else if (password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+                            e.target.style.borderColor = '#51cf66';
+                        } else {
+                            e.target.style.borderColor = '#ffd43b';
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Password match validation
+        confirmInputs.forEach((input, index) => {
+            if (input) {
+                console.log(`🔧 Adding password match validation ${index + 1}`);
+                input.addEventListener('input', () => validatePasswordMatch(input, passwordInputs[index]));
+                input.addEventListener('blur', () => validatePasswordMatch(input, passwordInputs[index]));
+            }
+        });
+    }
+    
+    function validatePasswordMatch(confirmInput, passwordInput) {
+        if (!confirmInput || !passwordInput) return true;
+        
+        const password = passwordInput.value;
+        const confirmPassword = confirmInput.value;
+        
+        if (password && confirmPassword) {
+            if (password !== confirmPassword) {
+                confirmInput.style.borderColor = '#ff6b6b';
+                return false;
+            } else {
+                confirmInput.style.borderColor = '#51cf66';
+                return true;
+            }
         }
         
-        // Retailer password validation
-        const retailerConfirm = document.getElementById('retailer-confirm-password-input');
-        if (retailerConfirm) {
-            retailerConfirm.addEventListener('input', () => validatePasswordMatch('retailer'));
-            retailerConfirm.addEventListener('blur', () => validatePasswordMatch('retailer'));
-        }
+        return true;
+    }
+    
+    function setupPasswordToggles() {
+        console.log('👁️ Setting up password visibility toggles...');
         
-        // Password strength indicators
-        const passwordInputs = document.querySelectorAll('input[type=\"password\"]:not([id*=\"confirm\"])');\n        passwordInputs.forEach(input => {\n            input.addEventListener('input', function(e) {\n                const password = e.target.value;\n                \n                // Reset styling\n                e.target.style.borderColor = '';\n                \n                if (password.length > 0) {\n                    if (password.length < 6) {\n                        e.target.style.borderColor = '#ff6b6b';\n                    } else if (password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)/.test(password)) {\n                        e.target.style.borderColor = '#51cf66';\n                    } else {\n                        e.target.style.borderColor = '#ffd43b';\n                    }\n                }\n            });\n        });\n    }\n    \n    function validatePasswordMatch(userType) {\n        const password = document.getElementById(`${userType}-password-input`)?.value;\n        const confirmPassword = document.getElementById(`${userType}-confirm-password-input`)?.value;\n        const confirmInput = document.getElementById(`${userType}-confirm-password-input`);\n        \n        if (!password || !confirmPassword || !confirmInput) {\n            return true;\n        }\n        \n        if (password !== confirmPassword) {\n            confirmInput.style.borderColor = '#ff6b6b';\n            return false;\n        } else {\n            confirmInput.style.borderColor = '#51cf66';\n            return true;\n        }\n    }\n    \n    function setupPasswordToggles() {\n        const toggleButtons = document.querySelectorAll('.input-visibility-toggle');\n        \n        toggleButtons.forEach(button => {\n            const showIcon = button.querySelector('[wized=\"icon_show_password\"]');\n            const hideIcon = button.querySelector('[wized=\"icon_hide_password\"]');\n            const wrapper = button.closest('.form_field-wrapper');\n            const passwordInput = wrapper?.querySelector('input[type=\"password\"], input[type=\"text\"]');\n            \n            if (passwordInput && showIcon && hideIcon) {\n                hideIcon.style.display = 'none';\n                \n                button.addEventListener('click', function(e) {\n                    e.preventDefault();\n                    e.stopPropagation();\n                    \n                    if (passwordInput.type === 'password') {\n                        passwordInput.type = 'text';\n                        showIcon.style.display = 'none';\n                        hideIcon.style.display = 'block';\n                    } else {\n                        passwordInput.type = 'password';\n                        showIcon.style.display = 'block';\n                        hideIcon.style.display = 'none';\n                    }\n                });\n                \n                console.log('✅ Password toggle setup');\n            }\n        });\n    }\n    \n    function getRedirectUrl(userRole) {\n        const currentDomain = window.location.origin;\n        const basePath = '/dev/app';\n        \n        if (userRole === 'Retailer' || userRole === 'retailer') {\n            return `${currentDomain}${basePath}/retailer/dashboard`;\n        } else {\n            return `${currentDomain}${basePath}/customer/dashboard`;\n        }\n    }\n    \n    function showLoading(button, isLoading) {\n        if (!button) return;\n        \n        if (isLoading) {\n            button.dataset.originalText = button.textContent;\n            button.textContent = 'Creating account...';\n            button.disabled = true;\n            button.style.opacity = '0.7';\n        } else {\n            button.textContent = button.dataset.originalText || 'Sign up';\n            button.disabled = false;\n            button.style.opacity = '1';\n        }\n    }\n    \n    function showSuccess(message) {\n        console.log('✅ Showing success:', message);\n        \n        const successElement = document.querySelector('.w-form-done') ||\n                              document.querySelector('.success-message') ||\n                              document.querySelector('.form-success');\n        \n        if (successElement) {\n            successElement.textContent = message;\n            successElement.style.display = 'block';\n            \n            // Hide any error messages\n            hideError();\n        } else {\n            alert(message);\n        }\n    }\n    \n    function showError(message) {\n        console.log('⚠️ Showing error:', message);\n        \n        const errorElement = document.querySelector('.w--tab-active .error-text') ||\n                            document.querySelector('.error-message') ||\n                            document.querySelector('.form-error') ||\n                            document.querySelector('.w-form-fail');\n        \n        if (errorElement) {\n            errorElement.textContent = message;\n            errorElement.style.display = 'block';\n            \n            const container = errorElement.closest('.error-container, .w-form-fail');\n            if (container) {\n                container.style.display = 'block';\n            }\n        } else {\n            alert(message);\n        }\n    }\n    \n    function hideError() {\n        const errorElements = document.querySelectorAll('.error-text, .error-message, .form-error, .w-form-fail');\n        errorElements.forEach(element => {\n            element.style.display = 'none';\n            const container = element.closest('.error-container');\n            if (container) {\n                container.style.display = 'none';\n            }\n        });\n    }\n    \n    // Start initialization\n    if (document.readyState === 'loading') {\n        document.addEventListener('DOMContentLoaded', init);\n    } else {\n        init();\n    }\n    \n    console.log('✅ Webflow Signup Script Loaded');\n    \n})();
+        const toggleButtons = document.querySelectorAll('.input-visibility-toggle');
+        
+        toggleButtons.forEach((button, index) => {
+            console.log(`🔧 Setting up toggle button ${index + 1}`);
+            
+            const showIcon = button.querySelector('[wized="icon_show_password"]');
+            const hideIcon = button.querySelector('[wized="icon_hide_password"]');
+            const wrapper = button.closest('.form_field-wrapper');
+            const passwordInput = wrapper?.querySelector('input[type="password"], input[type="text"]');
+            
+            if (passwordInput && showIcon && hideIcon) {
+                // Initially hide the "hide" icon
+                hideIcon.style.display = 'none';
+                
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('👁️ Password toggle clicked');
+                    
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        showIcon.style.display = 'none';
+                        hideIcon.style.display = 'block';
+                    } else {
+                        passwordInput.type = 'password';
+                        showIcon.style.display = 'block';
+                        hideIcon.style.display = 'none';
+                    }
+                });
+                
+                console.log(`✅ Password toggle ${index + 1} setup complete`);
+            } else {
+                console.log(`⚠️ Password toggle ${index + 1} missing required elements`);
+            }
+        });
+    }
+    
+    function getRedirectUrl(userRole) {
+        const currentDomain = window.location.origin;
+        const basePath = '/dev/app';
+        
+        if (userRole === 'Retailer' || userRole === 'retailer') {
+            return `${currentDomain}${basePath}/retailer/dashboard`;
+        } else {
+            return `${currentDomain}${basePath}/customer/dashboard`;
+        }
+    }
+    
+    function showSuccess(message) {
+        console.log('✅ Showing success:', message);
+        
+        const successElement = document.querySelector('.w-form-done') ||
+                              document.querySelector('.success-message') ||
+                              document.querySelector('.form-success');
+        
+        if (successElement) {
+            successElement.textContent = message;
+            successElement.style.display = 'block';
+            hideError();
+        } else {
+            alert(message);
+        }
+    }
+    
+    function showError(message) {
+        console.log('⚠️ Showing error:', message);
+        
+        const errorElement = document.querySelector('.w--tab-active .error-text') ||
+                            document.querySelector('.error-message') ||
+                            document.querySelector('.form-error') ||
+                            document.querySelector('.w-form-fail');
+        
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            const container = errorElement.closest('.error-container, .w-form-fail');
+            if (container) {
+                container.style.display = 'block';
+            }
+        } else {
+            alert(message);
+        }
+    }
+    
+    function hideError() {
+        const errorElements = document.querySelectorAll('.error-text, .error-message, .form-error, .w-form-fail');
+        errorElements.forEach(element => {
+            element.style.display = 'none';
+            const container = element.closest('.error-container');
+            if (container) {
+                container.style.display = 'none';
+            }
+        });
+    }
+    
+    // Start initialization
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+    console.log('✅ Fixed Webflow Signup Script Loaded');
+    
+})();
