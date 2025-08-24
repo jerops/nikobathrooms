@@ -1,136 +1,70 @@
+// RESTORED SIGNUP FORM HANDLER
+// Fixed version with improved error handling and validation
+
+console.log('📝 Signup form handler loading...');
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM loaded, setting up signup forms...');
+    
+    // Wait for NikoPIM to be available
     function waitForNikoPIM() {
-        if (window.NikoPIM && window.NikoPIM.register) {
+        if (window.NikoPIM && typeof window.NikoPIM.register === 'function') {
+            console.log('✅ NikoPIM available, setting up signup forms');
             setupSignupForms();
             setupPasswordValidation();
             setupPasswordToggle();
         } else {
+            console.log('⏳ Waiting for NikoPIM...');
             setTimeout(waitForNikoPIM, 100);
         }
     }
     
-    function getRedirectUrl(userType) {
+    // Also listen for the custom ready event
+    window.addEventListener('NikoPIMReady', function() {
+        console.log('🚀 NikoPIMReady event received');
+        setupSignupForms();
+        setupPasswordValidation();
+        setupPasswordToggle();
+    });
+    
+    function getRedirectUrl(userRole) {
         const currentDomain = window.location.origin;
         const basePath = '/dev/app';
-        return userType === 'Customer'
-            ? `${currentDomain}${basePath}/customer/dashboard`
-            : `${currentDomain}${basePath}/retailer/dashboard`;
+        
+        // Normalize role comparison
+        const role = (userRole || '').toLowerCase();
+        
+        if (role === 'customer' || role === 'Customer') {
+            return `${currentDomain}${basePath}/customer/dashboard`;
+        } else if (role === 'retailer' || role === 'Retailer') {
+            return `${currentDomain}${basePath}/retailer/dashboard`;
+        } else {
+            // Default to customer dashboard if role is unclear
+            return `${currentDomain}${basePath}/customer/dashboard`;
+        }
     }
     
     function setupSignupForms() {
+        console.log('🔧 Setting up signup forms...');
+        
+        // Customer signup
         const customerSignupBtn = document.getElementById('customer-signup-btn');
         if (customerSignupBtn) {
+            console.log('✅ Found customer signup button');
             customerSignupBtn.addEventListener('click', handleCustomerSignup);
+        } else {
+            console.log('⚠️ Customer signup button not found');
         }
         
+        // Retailer signup
         const retailerSignupBtn = document.getElementById('retailer-signup-btn');
         if (retailerSignupBtn) {
+            console.log('✅ Found retailer signup button');
             retailerSignupBtn.addEventListener('click', handleRetailerSignup);
-        }
-    }
-    
-    function setupPasswordValidation() {
-        const customerConfirm = document.getElementById('customer-confirm-password-input');
-        if (customerConfirm) {
-            customerConfirm.addEventListener('input', () => validatePasswordMatch('customer'));
-        }
-        
-        const retailerConfirm = document.getElementById('retailer-confirm-password-input');
-        if (retailerConfirm) {
-            retailerConfirm.addEventListener('input', () => validatePasswordMatch('retailer'));
-        }
-    }
-    
-    function setupPasswordToggle() {
-        const toggleButtons = document.querySelectorAll('.input-visibility-toggle');
-        toggleButtons.forEach(button => {
-            const showIcon = button.querySelector('[wized="icon_show_password"]');
-            const hideIcon = button.querySelector('[wized="icon_hide_password"]');
-            const passwordInput = button.closest('.form_field-wrapper').querySelector('input[type="password"], input[type="text"]');
-            
-            if (passwordInput && showIcon && hideIcon) {
-                hideIcon.style.display = 'none';
-                
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (passwordInput.type === 'password') {
-                        passwordInput.type = 'text';
-                        showIcon.style.display = 'none';
-                        hideIcon.style.display = 'block';
-                    } else {
-                        passwordInput.type = 'password';
-                        showIcon.style.display = 'block';
-                        hideIcon.style.display = 'none';
-                    }
-                });
-            }
-        });
-    }
-    
-    function validatePasswordMatch(userType) {
-        const password = document.getElementById(`${userType}-password-input`).value;
-        const confirmPassword = document.getElementById(`${userType}-confirm-password-input`).value;
-        const confirmInput = document.getElementById(`${userType}-confirm-password-input`);
-        
-        if (password && confirmPassword && password !== confirmPassword) {
-            confirmInput.style.borderColor = '#ff0000';
-            showError(userType, 'Passwords do not match');
-            return false;
         } else {
-            confirmInput.style.borderColor = '';
-            hideError(userType);
-            return true;
+            console.log('⚠️ Retailer signup button not found');
         }
-    }
-    
-    async function handleCustomerSignup(e) {
-        e.preventDefault();
-        if (!validatePasswordMatch('customer')) return;
         
-        const name = document.getElementById('customer-name-input').value;
-        const email = document.getElementById('customer-email-input').value;
-        const password = document.getElementById('customer-password-input').value;
-        
-        const result = await window.NikoPIM.register(email, password, name, 'Customer');
-        
-        if (result.success) {
-            window.location.href = getRedirectUrl('Customer');
-        } else {
-            showError('customer', result.error);
-        }
-    }
-    
-    async function handleRetailerSignup(e) {
-        e.preventDefault();
-        if (!validatePasswordMatch('retailer')) return;
-        
-        const name = document.getElementById('retailer-name-input').value;
-        const email = document.getElementById('retailer-email-input').value;
-        const password = document.getElementById('retailer-password-input').value;
-        
-        const result = await window.NikoPIM.register(email, password, name, 'Retailer');
-        
-        if (result.success) {
-            window.location.href = getRedirectUrl('Retailer');
-        } else {
-            showError('retailer', result.error);
-        }
-    }
-    
-    function showError(userType, message) {
-        const errorElement = document.querySelector('.w--tab-active .error-text');
-        if (errorElement) {
-            errorElement.textContent = message;
-            errorElement.parentElement.parentElement.style.display = 'block';
-        }
-    }
-    
-    function hideError(userType) {
-        const errorElement = document.querySelector('.w--tab-active .error-text');
-        if (errorElement) {
-            errorElement.parentElement.parentElement.style.display = 'none';
-        }
-    }
-    
-    waitForNikoPIM();
-});
+        // Generic signup forms
+        const signupForms = document.querySelectorAll('form[data-name=\"Signup-Form\"], .signup-form');
+        signupForms.forEach((form, index) => {\n            console.log(`✅ Found signup form ${index + 1}`);\n            form.addEventListener('submit', handleGenericSignup);\n        });\n    }\n    \n    function setupPasswordValidation() {\n        console.log('🔒 Setting up password validation...');\n        \n        // Customer password validation\n        const customerConfirm = document.getElementById('customer-confirm-password-input');\n        if (customerConfirm) {\n            console.log('✅ Found customer confirm password field');\n            customerConfirm.addEventListener('input', () => validatePasswordMatch('customer'));\n            customerConfirm.addEventListener('blur', () => validatePasswordMatch('customer'));\n        }\n        \n        // Retailer password validation\n        const retailerConfirm = document.getElementById('retailer-confirm-password-input');\n        if (retailerConfirm) {\n            console.log('✅ Found retailer confirm password field');\n            retailerConfirm.addEventListener('input', () => validatePasswordMatch('retailer'));\n            retailerConfirm.addEventListener('blur', () => validatePasswordMatch('retailer'));\n        }\n        \n        // Password strength validation\n        const passwordInputs = document.querySelectorAll('input[type=\"password\"][id*=\"password-input\"]:not([id*=\"confirm\"])');\n        passwordInputs.forEach((input, index) => {\n            console.log(`🔧 Setting up password strength validation ${index + 1}`);\n            input.addEventListener('input', validatePasswordStrength);\n        });\n    }\n    \n    function setupPasswordToggle() {\n        console.log('👁️ Setting up password visibility toggles...');\n        \n        const toggleButtons = document.querySelectorAll('.input-visibility-toggle');\n        toggleButtons.forEach((button, index) => {\n            console.log(`🔧 Setting up toggle button ${index + 1}`);\n            \n            const showIcon = button.querySelector('[wized=\"icon_show_password\"]');\n            const hideIcon = button.querySelector('[wized=\"icon_hide_password\"]');\n            const passwordInput = button.closest('.form_field-wrapper')?.querySelector('input[type=\"password\"], input[type=\"text\"]');\n            \n            if (passwordInput && showIcon && hideIcon) {\n                // Initially hide the \"hide\" icon\n                hideIcon.style.display = 'none';\n                \n                button.addEventListener('click', function(e) {\n                    e.preventDefault();\n                    e.stopPropagation();\n                    \n                    if (passwordInput.type === 'password') {\n                        passwordInput.type = 'text';\n                        showIcon.style.display = 'none';\n                        hideIcon.style.display = 'block';\n                    } else {\n                        passwordInput.type = 'password';\n                        showIcon.style.display = 'block';\n                        hideIcon.style.display = 'none';\n                    }\n                });\n                \n                console.log(`✅ Password toggle ${index + 1} set up successfully`);\n            } else {\n                console.log(`⚠️ Password toggle ${index + 1} missing required elements`);\n            }\n        });\n    }\n    \n    function validatePasswordStrength(e) {\n        const password = e.target.value;\n        const input = e.target;\n        \n        // Reset styling\n        input.style.borderColor = '';\n        \n        if (password.length > 0) {\n            if (password.length < 6) {\n                input.style.borderColor = '#ff6b6b';\n                return false;\n            } else if (password.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)/.test(password)) {\n                input.style.borderColor = '#51cf66';\n                return true;\n            } else {\n                input.style.borderColor = '#ffd43b';\n                return true;\n            }\n        }\n        return true;\n    }\n    \n    function validatePasswordMatch(userType) {\n        console.log(`🔍 Validating password match for ${userType}`);\n        \n        const password = document.getElementById(`${userType}-password-input`)?.value;\n        const confirmPassword = document.getElementById(`${userType}-confirm-password-input`)?.value;\n        const confirmInput = document.getElementById(`${userType}-confirm-password-input`);\n        \n        if (!password || !confirmPassword || !confirmInput) {\n            console.log('⚠️ Password or confirm password field not found');\n            return true;\n        }\n        \n        if (password && confirmPassword) {\n            if (password !== confirmPassword) {\n                confirmInput.style.borderColor = '#ff6b6b';\n                showError(userType, 'Passwords do not match');\n                console.log('❌ Passwords do not match');\n                return false;\n            } else {\n                confirmInput.style.borderColor = '#51cf66';\n                hideError(userType);\n                console.log('✅ Passwords match');\n                return true;\n            }\n        }\n        \n        return true;\n    }\n    \n    async function handleCustomerSignup(e) {\n        console.log('👤 Customer signup triggered');\n        e.preventDefault();\n        \n        try {\n            showLoading('customer', true);\n            hideError('customer');\n            \n            // Validate password match first\n            if (!validatePasswordMatch('customer')) {\n                throw new Error('Passwords do not match');\n            }\n            \n            const name = document.getElementById('customer-name-input')?.value?.trim();\n            const email = document.getElementById('customer-email-input')?.value?.trim();\n            const password = document.getElementById('customer-password-input')?.value;\n            \n            if (!name || !email || !password) {\n                throw new Error('Please fill in all required fields');\n            }\n            \n            if (password.length < 6) {\n                throw new Error('Password must be at least 6 characters long');\n            }\n            \n            console.log('📧 Customer signup attempt:', email);\n            const result = await window.NikoPIM.register(email, password, name, 'Customer');\n            \n            if (result.success) {\n                console.log('✅ Customer signup successful');\n                \n                // Show success message\n                showSuccess('customer', result.message);\n                \n                // Redirect after a short delay\n                setTimeout(() => {\n                    const redirectUrl = getRedirectUrl('Customer');\n                    console.log('🔄 Redirecting to:', redirectUrl);\n                    window.location.href = redirectUrl;\n                }, 2000);\n            } else {\n                throw new Error(result.error || 'Signup failed');\n            }\n        } catch (error) {\n            console.error('❌ Customer signup error:', error);\n            showError('customer', error.message);\n        } finally {\n            showLoading('customer', false);\n        }\n    }\n    \n    async function handleRetailerSignup(e) {\n        console.log('🏪 Retailer signup triggered');\n        e.preventDefault();\n        \n        try {\n            showLoading('retailer', true);\n            hideError('retailer');\n            \n            // Validate password match first\n            if (!validatePasswordMatch('retailer')) {\n                throw new Error('Passwords do not match');\n            }\n            \n            const name = document.getElementById('retailer-name-input')?.value?.trim();\n            const email = document.getElementById('retailer-email-input')?.value?.trim();\n            const password = document.getElementById('retailer-password-input')?.value;\n            \n            if (!name || !email || !password) {\n                throw new Error('Please fill in all required fields');\n            }\n            \n            if (password.length < 6) {\n                throw new Error('Password must be at least 6 characters long');\n            }\n            \n            console.log('📧 Retailer signup attempt:', email);\n            const result = await window.NikoPIM.register(email, password, name, 'Retailer');\n            \n            if (result.success) {\n                console.log('✅ Retailer signup successful');\n                \n                // Show success message\n                showSuccess('retailer', result.message);\n                \n                // Redirect after a short delay\n                setTimeout(() => {\n                    const redirectUrl = getRedirectUrl('Retailer');\n                    console.log('🔄 Redirecting to:', redirectUrl);\n                    window.location.href = redirectUrl;\n                }, 2000);\n            } else {\n                throw new Error(result.error || 'Signup failed');\n            }\n        } catch (error) {\n            console.error('❌ Retailer signup error:', error);\n            showError('retailer', error.message);\n        } finally {\n            showLoading('retailer', false);\n        }\n    }\n    \n    async function handleGenericSignup(e) {\n        console.log('📝 Generic form signup triggered');\n        e.preventDefault();\n        \n        try {\n            const form = e.target;\n            const name = form.querySelector('input[name*=\"name\"], input[type=\"text\"]')?.value?.trim();\n            const email = form.querySelector('input[type=\"email\"], input[name*=\"email\"]')?.value?.trim();\n            const password = form.querySelector('input[type=\"password\"][name*=\"password\"]:not([name*=\"confirm\"])')?.value;\n            const confirmPassword = form.querySelector('input[type=\"password\"][name*=\"confirm\"]')?.value;\n            \n            if (!name || !email || !password) {\n                throw new Error('Please fill in all required fields');\n            }\n            \n            if (confirmPassword && password !== confirmPassword) {\n                throw new Error('Passwords do not match');\n            }\n            \n            if (password.length < 6) {\n                throw new Error('Password must be at least 6 characters long');\n            }\n            \n            // Determine user type based on form or default to Customer\n            const userType = form.dataset.userType || form.getAttribute('data-user-type') || 'Customer';\n            \n            console.log('📧 Generic signup attempt:', email, 'as', userType);\n            const result = await window.NikoPIM.register(email, password, name, userType);\n            \n            if (result.success) {\n                console.log('✅ Generic signup successful');\n                \n                // Show success message\n                showSuccess('form', result.message);\n                \n                // Redirect after a short delay\n                setTimeout(() => {\n                    const redirectUrl = getRedirectUrl(userType);\n                    console.log('🔄 Redirecting to:', redirectUrl);\n                    window.location.href = redirectUrl;\n                }, 2000);\n            } else {\n                throw new Error(result.error || 'Signup failed');\n            }\n        } catch (error) {\n            console.error('❌ Generic signup error:', error);\n            showError('form', error.message);\n        }\n    }\n    \n    function showLoading(userType, isLoading) {\n        const button = document.getElementById(`${userType}-signup-btn`);\n        if (button) {\n            if (isLoading) {\n                button.textContent = 'Creating account...';\n                button.disabled = true;\n                button.style.opacity = '0.7';\n            } else {\n                button.textContent = 'Sign up';\n                button.disabled = false;\n                button.style.opacity = '1';\n            }\n        }\n    }\n    \n    function showSuccess(userType, message) {\n        console.log(`✅ Showing success for ${userType}:`, message);\n        \n        // Try to find success message elements\n        const successSelectors = [\n            '.success-message',\n            '.form-success',\n            '[data-success=\"true\"]',\n            '.w-form-done'\n        ];\n        \n        let successElement = null;\n        for (const selector of successSelectors) {\n            successElement = document.querySelector(selector);\n            if (successElement) break;\n        }\n        \n        if (successElement) {\n            successElement.textContent = message;\n            successElement.style.display = 'block';\n            console.log('✅ Success message displayed');\n        } else {\n            console.log('⚠️ No success element found, using alert');\n            alert(message);\n        }\n    }\n    \n    function showError(userType, message) {\n        console.log(`⚠️ Showing error for ${userType}:`, message);\n        \n        // Try multiple error selectors\n        const errorSelectors = [\n            '.w--tab-active .error-text',\n            `.${userType}-error`,\n            '.error-message',\n            '.form-error',\n            '[data-error=\"true\"]',\n            '.w-form-fail'\n        ];\n        \n        let errorElement = null;\n        for (const selector of errorSelectors) {\n            errorElement = document.querySelector(selector);\n            if (errorElement) break;\n        }\n        \n        if (errorElement) {\n            errorElement.textContent = message;\n            const errorContainer = errorElement.closest('.error-container, .error-wrapper') || errorElement.parentElement;\n            if (errorContainer) {\n                errorContainer.style.display = 'block';\n            }\n            errorElement.style.display = 'block';\n            console.log('✅ Error message displayed');\n        } else {\n            console.log('⚠️ No error element found, using alert');\n            alert(message);\n        }\n    }\n    \n    function hideError(userType) {\n        const errorElements = document.querySelectorAll('.error-text, .error-message, .form-error, [data-error=\"true\"], .w-form-fail');\n        errorElements.forEach(element => {\n            element.style.display = 'none';\n            const container = element.closest('.error-container, .error-wrapper');\n            if (container) {\n                container.style.display = 'none';\n            }\n        });\n    }\n    \n    // Start the initialization\n    console.log('🚀 Starting signup form initialization...');\n    waitForNikoPIM();\n});\n\nconsole.log('✅ Signup form handler loaded');
