@@ -1,16 +1,18 @@
 /* 
- * STANDALONE WEBFLOW SIGNUP SCRIPT - FIXED VERSION
+ * STANDALONE WEBFLOW SIGNUP SCRIPT - WEBFLOW CONFLICT FIX
  * Place this in your signup page's custom code section
  * No bundling required - works directly in Webflow
  * 
  * FIXES:
+ * - Webflow form validation conflicts
+ * - "Passwords cannot be submitted" error
  * - Better Supabase loading with error handling
  * - Multiple button detection methods
  * - Enhanced debugging
  * - Improved element finding
  */
 
-console.log('📝 Fixed Webflow Signup Script Loading...');
+console.log('📝 Webflow Signup Script with Form Conflict Fix Loading...');
 
 (function() {
     'use strict';
@@ -18,6 +20,70 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
     // Configuration
     const SUPABASE_URL = 'https://bzjoxjqfpmjhbfijthpp.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6am94anFmcG1qaGJmaWp0aHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NjIyMzksImV4cCI6MjA3MTMzODIzOX0.sL9omeLIgpgqYjTJM6SGQPSvUvm5z-Yr9rOzkOi2mJk';
+    
+    // Fix Webflow form conflicts immediately
+    function disableWebflowValidation() {
+        console.log('🔧 Disabling Webflow form validation...');
+        
+        const forms = document.querySelectorAll('form');
+        forms.forEach((form, index) => {
+            console.log(`📝 Processing form ${index + 1}`);
+            
+            // Disable Webflow's native form handling
+            form.setAttribute('data-wf-ignore', 'true');
+            form.setAttribute('data-wf-form-validation', 'false');
+            
+            // Remove action to prevent default submission
+            if (form.hasAttribute('action') && form.getAttribute('action') !== '#') {
+                form.setAttribute('data-original-action', form.getAttribute('action'));
+                form.removeAttribute('action');
+            }
+            
+            // Set method to GET to prevent POST conflicts
+            form.setAttribute('method', 'get');
+            
+            // Handle form submission prevention
+            form.addEventListener('submit', function(e) {
+                console.log('🛑 Preventing form submission');
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            });
+            
+            // Remove HTML5 validation from inputs
+            const inputs = form.querySelectorAll('input');
+            inputs.forEach((input, inputIndex) => {
+                // Store original required state
+                if (input.hasAttribute('required')) {
+                    input.setAttribute('data-originally-required', 'true');
+                }
+                
+                // Remove HTML5 validation
+                input.removeAttribute('required');
+                input.setAttribute('novalidate', 'true');
+                
+                // Prevent validation popup
+                input.addEventListener('invalid', function(e) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    return false;
+                });
+                
+                // Remove any existing validation listeners
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        console.log('🛑 Enter key prevented on input');
+                        return false;
+                    }
+                });
+                
+                console.log(`  ✅ Input ${inputIndex + 1} validation disabled`);
+            });
+            
+            console.log(`✅ Form ${index + 1} Webflow validation disabled`);
+        });
+    }
     
     // Load Supabase with better error handling
     function loadSupabase() {
@@ -33,7 +99,6 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
             script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
             script.onload = () => {
                 console.log('✅ Supabase loaded successfully');
-                // Wait a moment for it to initialize
                 setTimeout(() => resolve(true), 100);
             };
             script.onerror = (error) => {
@@ -46,9 +111,12 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
     
     // Initialize when DOM is ready
     async function init() {
-        console.log('🚀 Initializing Webflow Signup...');
+        console.log('🚀 Initializing Webflow Signup with Conflict Fix...');
         
-        // Load Supabase first
+        // First, disable Webflow validation immediately
+        disableWebflowValidation();
+        
+        // Load Supabase
         const supabaseLoaded = await loadSupabase();
         if (!supabaseLoaded) {
             console.error('❌ Cannot proceed without Supabase');
@@ -90,23 +158,33 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
         // Setup password features
         setupPasswordValidation(formElements);
         setupPasswordToggles();
+        
+        // Final check - disable any remaining Webflow validation
+        setTimeout(disableWebflowValidation, 2000);
     }
     
     function debugFormElements() {
         console.log('🔍 Debugging form elements...');
         
+        // Show all forms
+        const allForms = document.querySelectorAll('form');
+        console.log(`📋 Found ${allForms.length} forms:`);
+        allForms.forEach((form, i) => {
+            console.log(`  ${i + 1}. Action: "${form.action}" | Method: "${form.method}" | Class: "${form.className}"`);
+        });
+        
         // Show all inputs
         const allInputs = document.querySelectorAll('input');
         console.log(`📝 Found ${allInputs.length} inputs:`);
         allInputs.forEach((input, i) => {
-            console.log(`  ${i + 1}. ID: "${input.id}" | Type: "${input.type}" | Placeholder: "${input.placeholder}"`);
+            console.log(`  ${i + 1}. ID: "${input.id}" | Type: "${input.type}" | Name: "${input.name}" | Required: ${input.hasAttribute('required')}`);
         });
         
         // Show all buttons
         const allButtons = document.querySelectorAll('button, input[type="submit"], .w-button');
         console.log(`🔘 Found ${allButtons.length} buttons:`);
         allButtons.forEach((button, i) => {
-            console.log(`  ${i + 1}. ID: "${button.id}" | Text: "${button.textContent?.trim()}" | Class: "${button.className}"`);
+            console.log(`  ${i + 1}. ID: "${button.id}" | Type: "${button.type}" | Text: "${button.textContent?.trim()}" | Class: "${button.className}"`);
         });
     }
     
@@ -163,10 +241,15 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
         ];
         
         for (const selector of selectors) {
-            const element = document.querySelector(selector);
-            if (element) {
-                console.log(`🎯 Found ${userType} button using selector: ${selector}`);
-                return element;
+            try {
+                const element = document.querySelector(selector);
+                if (element) {
+                    console.log(`🎯 Found ${userType} button using selector: ${selector}`);
+                    return element;
+                }
+            } catch (e) {
+                // Skip invalid selectors
+                continue;
             }
         }
         
@@ -181,9 +264,14 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
         const newButton = elements.customerButton.cloneNode(true);
         elements.customerButton.parentNode.replaceChild(newButton, elements.customerButton);
         
+        // Prevent all default behaviors
+        newButton.type = 'button'; // Ensure it's not a submit button
+        newButton.setAttribute('type', 'button');
+        
         newButton.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             
             console.log('👤 Customer signup triggered');
             await handleSignup(e, 'Customer', {
@@ -192,6 +280,8 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
                 password: elements.customerPassword,
                 confirm: elements.customerConfirm
             });
+            
+            return false;
         });
         
         console.log('✅ Customer signup handler attached');
@@ -203,9 +293,13 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
         const newButton = elements.retailerButton.cloneNode(true);
         elements.retailerButton.parentNode.replaceChild(newButton, elements.retailerButton);
         
+        newButton.type = 'button';
+        newButton.setAttribute('type', 'button');
+        
         newButton.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             
             console.log('🏪 Retailer signup triggered');
             await handleSignup(e, 'Retailer', {
@@ -214,6 +308,8 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
                 password: elements.retailerPassword,
                 confirm: elements.retailerConfirm
             });
+            
+            return false;
         });
         
         console.log('✅ Retailer signup handler attached');
@@ -225,14 +321,18 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
         forms.forEach((form, index) => {
             console.log(`🔧 Setting up generic form ${index + 1}`);
             
-            const submitBtn = form.querySelector('button[type="submit"], input[type="submit"], .w-button');
+            const submitBtn = form.querySelector('button[type="submit"], input[type="submit"], .w-button, button');
             if (submitBtn) {
                 const newButton = submitBtn.cloneNode(true);
                 submitBtn.parentNode.replaceChild(newButton, submitBtn);
                 
+                newButton.type = 'button';
+                newButton.setAttribute('type', 'button');
+                
                 newButton.addEventListener('click', async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    e.stopImmediatePropagation();
                     
                     console.log(`📝 Generic form ${index + 1} submitted`);
                     
@@ -245,6 +345,8 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
                     
                     const userType = form.dataset.userType || form.getAttribute('data-user-type') || 'Customer';
                     await handleSignup(e, userType, elements);
+                    
+                    return false;
                 });
             }
         });
@@ -495,13 +597,19 @@ console.log('📝 Fixed Webflow Signup Script Loading...');
         });
     }
     
-    // Start initialization
+    // Start initialization - run immediately and on DOM ready
+    disableWebflowValidation(); // Run immediately
+    
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
     
-    console.log('✅ Fixed Webflow Signup Script Loaded');
+    // Also try again after a delay in case of timing issues
+    setTimeout(disableWebflowValidation, 1000);
+    setTimeout(disableWebflowValidation, 3000);
+    
+    console.log('✅ Webflow Signup Script with Conflict Fix Loaded');
     
 })();
