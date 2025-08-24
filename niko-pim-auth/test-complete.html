@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niko PIM Authentication Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .test-section h2 { margin-top: 0; color: #333; }
+        input, button { margin: 5px; padding: 8px; }
+        button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        #status { margin: 20px 0; padding: 15px; border-radius: 8px; background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Niko PIM Authentication System Test</h1>
+    
+    <div id="status">
+        <h3>System Status</h3>
+        <div id="system-status">Loading...</div>
+    </div>
+    
+    <!-- Registration Test -->
+    <div class="test-section">
+        <h2>📝 Registration Test</h2>
+        <div>
+            <input type="text" id="reg-name" placeholder="Full Name" value="Test User">
+            <input type="email" id="reg-email" placeholder="Email" value="test@example.com">
+            <input type="password" id="reg-password" placeholder="Password" value="test123">
+            <select id="reg-type">
+                <option value="Customer">Customer</option>
+                <option value="Retailer">Retailer</option>
+            </select>
+            <button onclick="testRegister()">Register</button>
+        </div>
+        <div id="reg-result"></div>
+    </div>
+    
+    <!-- Login Test -->
+    <div class="test-section">
+        <h2>🔐 Login Test</h2>
+        <div>
+            <input type="email" id="login-email" placeholder="Email" value="test@example.com">
+            <input type="password" id="login-password" placeholder="Password" value="test123">
+            <button onclick="testLogin()">Login</button>
+        </div>
+        <div id="login-result"></div>
+    </div>
+    
+    <!-- User Info Test -->
+    <div class="test-section">
+        <h2>👤 Current User Info</h2>
+        <button onclick="checkUserInfo()">Check User Info</button>
+        <div id="user-info"></div>
+    </div>
+    
+    <!-- Logout Test -->
+    <div class="test-section">
+        <h2>🚪 Logout Test</h2>
+        <button onclick="testLogout()">Logout</button>
+        <div id="logout-result"></div>
+    </div>
+    
+    <!-- Console Output -->
+    <div class="test-section">
+        <h2>📋 Console Output</h2>
+        <div id="console-output" style="background: #000; color: #0f0; padding: 10px; height: 300px; overflow-y: scroll; font-family: monospace; font-size: 12px;"></div>
+    </div>
+
+    <!-- Load the authentication system -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Capture console output
+        const consoleOutput = document.getElementById('console-output');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function logToDiv(message, type = 'log') {
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f00' : '#0f0';
+            consoleOutput.innerHTML += `<div style="color: ${color}">[${time}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToDiv(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToDiv(args.join(' '), 'error');
+        };
+        
+        // Authentication System (Embedded)
+        console.log('🚀 Loading Niko PIM Authentication System...');
+        
+        const SUPABASE_URL = 'https://bzjoxjqfpmjhbfijthpp.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6am94anFmcG1qaGJmaWp0aHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NjIyMzksImV4cCI6MjA3MTMzODIzOX0.sL9omeLIgpgqYjTJM6SGQPSvUvm5z-Yr9rOzkOi2mJk';
+        
+        // Wait for Supabase to load
+        function initializeAuth() {
+            if (typeof window.supabase?.createClient === 'function') {
+                console.log('✅ Supabase available, creating client...');
+                
+                const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                
+                window.NikoPIM = {
+                    currentUser: null,
+                    userRole: null,
+                    
+                    async register(email, password, name, userType = 'Customer') {
+                        console.log('📝 Registration attempt:', { email, name, userType });
+                        
+                        try {
+                            if (!email || !password || !name) {
+                                throw new Error('All fields are required');
+                            }
+                            
+                            if (password.length < 6) {
+                                throw new Error('Password must be at least 6 characters long');
+                            }
+
+                            const { data, error } = await supabaseClient.auth.signUp({
+                                email: email.trim(),
+                                password: password,
+                                options: {
+                                    data: {
+                                        name: name.trim(),
+                                        user_type: userType,
+                                        role: userType
+                                    }
+                                }
+                            });
+
+                            if (error) {
+                                console.error('Registration error:', error);
+                                throw error;
+                            }
+
+                            console.log('✅ Registration successful:', data.user?.email);
+                            
+                            if (data.user) {
+                                this.currentUser = data.user;
+                                this.userRole = userType;
+                            }
+                            
+                            return { 
+                                success: true, 
+                                user: data.user,
+                                role: userType,
+                                message: 'Registration successful! Please check your email to confirm your account.'
+                            };
+                        } catch (error) {
+                            console.error('❌ Registration failed:', error);
+                            return {
+                                success: false,
+                                error: error.message || 'Registration failed. Please try again.'
+                            };
+                        }
+                    },
+                    
+                    async login(email, password) {
+                        console.log('🔐 Login attempt:', { email });
+                        
+                        try {
+                            if (!email || !password) {
+                                throw new Error('Email and password are required');
+                            }
+
+                            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                                email: email.trim(),
+                                password: password
+                            });
+
+                            if (error) {
+                                console.error('Login error:', error);
+                                throw error;
+                            }
+
+                            this.currentUser = data.user;
+                            this.userRole = data.user?.user_metadata?.user_type || data.user?.user_metadata?.role || 'Customer';
+                            
+                            console.log('✅ Login successful:', data.user?.email, 'Role:', this.userRole);
+                            
+                            return { 
+                                success: true, 
+                                user: data.user,
+                                role: this.userRole,
+                                message: 'Login successful!'
+                            };
+                        } catch (error) {
+                            console.error('❌ Login failed:', error);
+                            return {
+                                success: false,
+                                error: error.message || 'Login failed. Please check your credentials.'
+                            };
+                        }
+                    },
+                    
+                    async logout() {
+                        console.log('🚪 Logout attempt');
+                        
+                        try {
+                            const { error } = await supabaseClient.auth.signOut();
+                            
+                            if (error) {
+                                console.error('Logout error:', error);
+                                throw error;
+                            }
+
+                            this.currentUser = null;
+                            this.userRole = null;
+                            
+                            console.log('✅ Logout successful');
+                            
+                            return { 
+                                success: true, 
+                                message: 'Logout successful'
+                            };
+                        } catch (error) {
+                            console.error('❌ Logout failed:', error);
+                            return {
+                                success: false,
+                                error: error.message || 'Logout failed'
+                            };
+                        }
+                    },
+                    
+                    isAuthenticated() {
+                        return !!this.currentUser;
+                    },
+                    
+                    getUserRole() {
+                        return this.userRole;
+                    },
+                    
+                    getCurrentUser() {
+                        return this.currentUser;
+                    },
+                    
+                    async checkAuth() {
+                        try {
+                            const { data: { user } } = await supabaseClient.auth.getUser();
+                            if (user) {
+                                this.currentUser = user;
+                                this.userRole = user.user_metadata?.user_type || user.user_metadata?.role || 'Customer';
+                                return { success: true, user, role: this.userRole };
+                            }
+                            return { success: false, message: 'No authenticated user' };
+                        } catch (error) {
+                            console.error('Auth check failed:', error);
+                            return { success: false, error: error.message };
+                        }
+                    }
+                };
+                
+                console.log('✅ NikoPIM initialized');
+                updateStatus('✅ System ready');
+                
+                // Check current auth state
+                window.NikoPIM.checkAuth().then(result => {
+                    if (result.success) {
+                        console.log('👤 Found existing session:', result.user.email);
+                    } else {
+                        console.log('👤 No existing session');
+                    }
+                });
+                
+            } else {
+                console.log('⏳ Waiting for Supabase...');
+                setTimeout(initializeAuth, 100);
+            }
+        }
+        
+        // Test functions
+        async function testRegister() {
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const userType = document.getElementById('reg-type').value;
+            
+            const result = await window.NikoPIM.register(email, password, name, userType);
+            
+            const resultDiv = document.getElementById('reg-result');
+            if (result.success) {
+                resultDiv.innerHTML = `<div class="success">✅ ${result.message}</div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ ${result.error}</div>`;
+            }
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            const result = await window.NikoPIM.login(email, password);
+            
+            const resultDiv = document.getElementById('login-result');
+            if (result.success) {
+                resultDiv.innerHTML = `<div class="success">✅ ${result.message}<br>Role: ${result.role}</div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ ${result.error}</div>`;
+            }
+        }
+        
+        async function testLogout() {
+            const result = await window.NikoPIM.logout();
+            
+            const resultDiv = document.getElementById('logout-result');
+            if (result.success) {
+                resultDiv.innerHTML = `<div class="success">✅ ${result.message}</div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ ${result.error}</div>`;
+            }
+        }
+        
+        async function checkUserInfo() {
+            const authResult = await window.NikoPIM.checkAuth();
+            
+            const infoDiv = document.getElementById('user-info');
+            if (authResult.success) {
+                const user = authResult.user;
+                infoDiv.innerHTML = `
+                    <div class="info">
+                        <strong>Email:</strong> ${user.email}<br>
+                        <strong>Name:</strong> ${user.user_metadata?.name || 'N/A'}<br>
+                        <strong>Role:</strong> ${authResult.role}<br>
+                        <strong>Created:</strong> ${new Date(user.created_at).toLocaleDateString()}<br>
+                        <strong>Last Sign In:</strong> ${user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'N/A'}
+                    </div>
+                `;
+            } else {
+                infoDiv.innerHTML = `<div class="error">❌ No authenticated user</div>`;
+            }
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('system-status').innerHTML = message;
+        }
+        
+        // Initialize when page loads
+        updateStatus('⏳ Loading...');
+        setTimeout(initializeAuth, 1000);
+        
+    </script>
+</body>
+</html>
