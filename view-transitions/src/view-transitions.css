@@ -1,0 +1,158 @@
+/**
+ * Niko Bathrooms View Transitions Styles
+ * Custom animations for the Niko Bathrooms Webflow application
+ * @version 1.0.0
+ */
+
+/* Loading state during transitions */
+.niko-transitioning {
+  cursor: wait;
+}
+
+.niko-transitioning * {
+  pointer-events: none;
+}
+
+/* Default Niko transition - smooth slide */
+::view-transition-group(root) {
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+::view-transition-old(root) {
+  animation-name: niko-slide-out;
+}
+
+::view-transition-new(root) {
+  animation-name: niko-slide-in;
+}
+
+@keyframes niko-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-2rem);
+    opacity: 0;
+  }
+}
+
+@keyframes niko-slide-in {
+  from {
+    transform: translateX(2rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Bathroom-themed fade transition */
+@keyframes niko-fade-out {
+  from {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  to {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+
+@keyframes niko-fade-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+/* Premium smooth transition */
+@keyframes niko-premium-out {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-1rem) scale(0.95);
+    opacity: 0;
+  }
+}
+
+@keyframes niko-premium-in {
+  from {
+    transform: translateY(1rem) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Utility classes for different transition styles */
+.niko-fade ::view-transition-old(root) {
+  animation-name: niko-fade-out;
+}
+
+.niko-fade ::view-transition-new(root) {
+  animation-name: niko-fade-in;
+}
+
+.niko-premium ::view-transition-old(root) {
+  animation-name: niko-premium-out;
+}
+
+.niko-premium ::view-transition-new(root) {
+  animation-name: niko-premium-in;
+}
+
+/* Speed variants */
+.niko-fast ::view-transition-group(root) {
+  animation-duration: 0.25s;
+}
+
+.niko-slow ::view-transition-group(root) {
+  animation-duration: 0.6s;
+}
+
+.niko-instant ::view-transition-group(root) {
+  animation-duration: 0ms;
+}
+
+/* Responsive animations - slower on mobile */
+@media (max-width: 768px) {
+  ::view-transition-group(root) {
+    animation-duration: 0.3s;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root) {
+    animation-duration: 0.1s;
+  }
+  
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-name: niko-fade-out, niko-fade-in;
+  }
+}
+
+/* Debug mode styles */
+.niko-debug ::view-transition-group(root) {
+  outline: 2px solid #ff6b6b;
+}
+
+.niko-debug ::view-transition-old(root) {
+  outline: 2px solid #4ecdc4;
+}
+
+.niko-debug ::view-transition-new(root) {
+  outline: 2px solid #45b7d1;
+}
