@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niko View Transitions - Integration Example</title>
+    <link rel="stylesheet" href="../src/view-transitions.css">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .shell_main-wrapper {
+            min-height: 400px;
+            padding: 2rem;
+            border: 2px dashed #ccc;
+            margin: 2rem 0;
+            background: #f9f9f9;
+        }
+        nav { 
+            margin: 2rem 0;
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav a {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            background: #007acc;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        nav a:hover {
+            background: #005a9e;
+        }
+        .controls {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .controls label {
+            display: block;
+            margin: 0.5rem 0;
+        }
+        .stats {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            font-family: monospace;
+        }
+        .brand {
+            color: #007acc;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🛁 <span class="brand">Niko Bathrooms</span> View Transitions</h1>
+        <p>Integration example for Webflow applications</p>
+    </header>
+    
+    <div class="controls">
+        <h3>🎨 Animation Controls</h3>
+        <div>
+            <strong>Style:</strong>
+            <label>
+                <input type="radio" name="style" value="" checked> Default (Slide)
+            </label>
+            <label>
+                <input type="radio" name="style" value="niko-fade"> Fade
+            </label>
+            <label>
+                <input type="radio" name="style" value="niko-premium"> Premium
+            </label>
+        </div>
+        
+        <div>
+            <strong>Speed:</strong>
+            <label>
+                <input type="radio" name="speed" value="" checked> Normal
+            </label>
+            <label>
+                <input type="radio" name="speed" value="niko-fast"> Fast
+            </label>
+            <label>
+                <input type="radio" name="speed" value="niko-slow"> Slow
+            </label>
+        </div>
+
+        <div>
+            <label>
+                <input type="checkbox" id="debugMode"> Debug Mode
+            </label>
+        </div>
+    </div>
+
+    <nav>
+        <h3>🔗 Navigation Links (will trigger transitions)</h3>
+        <a href="/dev/app/auth/sign-up">Sign Up</a>
+        <a href="/dev/app/auth/log-in">Log In</a>
+        <a href="/dev/app/customer/dashboard">Customer Dashboard</a>
+        <a href="/dev/app/retailer/dashboard">Retailer Dashboard</a>
+        <a href="/dev/app/settings/categories">Settings</a>
+    </nav>
+
+    <div class="shell_main-wrapper">
+        <h2>📱 Content Area</h2>
+        <p>This is the content that gets replaced during transitions.</p>
+        <p>Click the navigation links above to see transitions in action.</p>
+        <p><strong>🔧 Debug tip:</strong> Press <code>Ctrl+Shift+T</code> to see stats in console.</p>
+        <p><strong>⚡ Performance:</strong> Transitions are optimized for mobile and respect accessibility preferences.</p>
+    </div>
+
+    <div class="stats">
+        <h3>📊 System Status</h3>
+        <div id="stats-display">Initializing...</div>
+    </div>
+
+    <div>
+        <h3>🌐 External Links (no transitions)</h3>
+        <nav>
+            <a href="https://nikobathrooms.ie">Main Niko Site</a>
+            <a href="https://github.com/jerops/nikobathrooms">GitHub Repository</a>
+            <a href="#" target="_blank">New Tab Link</a>
+        </nav>
+    </div>
+
+    <script>
+        // Configure before loading the system
+        window.nikoBathroomsViewTransitionsConfig = {
+            appPath: '/dev/app/',
+            contentWrapperClass: '.shell_main-wrapper',
+            debug: true,
+            enableAnalytics: false
+        };
+    </script>
+    <script src="../src/view-transitions.js"></script>
+
+    <script>
+        // UI Controls
+        document.querySelectorAll('input[name="style"]').forEach(input => {
+            input.addEventListener('change', () => {
+                document.body.className = document.body.className.replace(/niko-\w+/g, '');
+                if (input.value) {
+                    document.body.classList.add(input.value);
+                }
+                updateSpeed();
+                updateDebug();
+            });
+        });
+
+        document.querySelectorAll('input[name="speed"]').forEach(input => {
+            input.addEventListener('change', updateSpeed);
+        });
+
+        document.getElementById('debugMode').addEventListener('change', updateDebug);
+
+        function updateSpeed() {
+            const speed = document.querySelector('input[name="speed"]:checked').value;
+            document.body.classList.remove('niko-fast', 'niko-slow');
+            if (speed) {
+                document.body.classList.add(speed);
+            }
+        }
+
+        function updateDebug() {
+            const debug = document.getElementById('debugMode').checked;
+            document.body.classList.toggle('niko-debug', debug);
+            
+            // Update system config
+            if (window.nikoBathroomsViewTransitions) {
+                window.nikoBathroomsViewTransitions.instance.updateConfig({ debug });
+            }
+        }
+
+        // Stats display
+        function updateStats() {
+            const statsElement = document.getElementById('stats-display');
+            if (window.nikoBathroomsViewTransitions) {
+                const stats = window.nikoBathroomsViewTransitions.stats();
+                statsElement.innerHTML = `
+                    <strong>Browser Support:</strong> ${stats.supported ? '✅ Supported' : '❌ Not Supported'}<br>
+                    <strong>Transitions:</strong> ${stats.transitionCount}<br>
+                    <strong>App Path:</strong> ${stats.config.appPath}<br>
+                    <strong>Debug Mode:</strong> ${stats.config.debug ? '🔧 Enabled' : '🔒 Disabled'}<br>
+                    <strong>Version:</strong> ${window.nikoBathroomsViewTransitions.version}
+                `;
+            }
+        }
+
+        // Update stats every 2 seconds
+        setInterval(updateStats, 2000);
+        
+        // Initial stats update
+        setTimeout(updateStats, 1000);
+
+        // Demo content updates
+        const contentArea = document.querySelector('.shell_main-wrapper');
+        const originalContent = contentArea.innerHTML;
+        
+        // Simulate page content changes for demo
+        let pageCounter = 0;
+        document.querySelectorAll('nav a[href^="/dev/app/"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                pageCounter++;
+                
+                // Simulate different page content
+                setTimeout(() => {
+                    contentArea.innerHTML = `
+                        <h2>📄 Page: ${link.textContent}</h2>
+                        <p>This is simulated content for ${link.textContent.toLowerCase()}.</p>
+                        <p><strong>Page Load #${pageCounter}</strong></p>
+                        <p>In a real Webflow app, this content would be fetched from the actual page.</p>
+                        <button onclick="document.querySelector('.shell_main-wrapper').innerHTML = \`${originalContent.replace(/`/g, '\\`')}\`">Reset to Demo</button>
+                    `;
+                }, 200);
+            });
+        });
+
+        console.log('🎬 Niko Bathrooms View Transitions Example loaded');
+        console.log('💡 Try navigating between the app links to see transitions in action');
+        console.log('🔧 Press Ctrl+Shift+T to see detailed stats');
+    </script>
+</body>
+</html>
