@@ -1,10 +1,12 @@
-// Environment configuration with secure fallbacks
+// SECURE Environment configuration - NO HARDCODED CREDENTIALS
 export const CONFIG = {
   SUPABASE: {
+    // These should be set as environment variables or injected at build time
     URL: process.env.SUPABASE_URL || (typeof window !== 'undefined' && window.ENV_SUPABASE_URL) || '',
     ANON_KEY: process.env.SUPABASE_ANON_KEY || (typeof window !== 'undefined' && window.ENV_SUPABASE_ANON_KEY) || ''
   },
   WEBFLOW: {
+    // These are less sensitive but still should be configurable
     SITE_ID: process.env.WEBFLOW_SITE_ID || (typeof window !== 'undefined' && window.ENV_WEBFLOW_SITE_ID) || '',
     COLLECTIONS: {
       RETAILERS: process.env.WEBFLOW_RETAILERS_ID || (typeof window !== 'undefined' && window.ENV_WEBFLOW_RETAILERS_ID) || '',
@@ -28,7 +30,7 @@ export const USER_ROLES = {
   RETAILER: 'Retailer'
 };
 
-// Environment validation
+// Environment validation with helpful error messages
 export function validateEnvironment() {
   const required = [
     { key: 'SUPABASE_URL', value: CONFIG.SUPABASE.URL },
@@ -38,7 +40,8 @@ export function validateEnvironment() {
   const missing = required.filter(item => !item.value);
   
   if (missing.length > 0) {
-    console.error('Missing required environment variables:', missing.map(item => item.key));
+    console.error('❌ Missing required environment variables:', missing.map(item => item.key));
+    console.error('🔧 Please set these as environment variables or window globals');
     throw new Error(`Missing required environment variables: ${missing.map(item => item.key).join(', ')}`);
   }
   
