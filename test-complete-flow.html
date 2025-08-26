@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niko Auth Complete Test - Signup THEN Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .error { border-left-color: #dc3545; }
+        .success { border-left-color: #28a745; }
+        .warning { border-left-color: #ffc107; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 8px 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { 
+            background: #6c757d; 
+            cursor: not-allowed; 
+        }
+        input, select {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 250px;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        #console { 
+            background: #1a1a1a; 
+            color: #00ff00; 
+            padding: 15px; 
+            font-family: 'Courier New', monospace; 
+            height: 300px; 
+            overflow-y: auto;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .step-number {
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .step-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .result-box {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Complete Niko Auth Test - SIGNUP → LOGIN Flow</h1>
+    
+    <div class="test-box warning">
+        <h3>⚠️ Important: Complete Flow Test</h3>
+        <p><strong>This tests the complete user journey:</strong></p>
+        <ol>
+            <li><strong>Check system status</strong></li>
+            <li><strong>Create new user account (SIGNUP)</strong></li>
+            <li><strong>Login with the new account</strong></li>
+            <li><strong>Test user session</strong></li>
+        </ol>
+        <p><em>Use a REAL email address you can access for email confirmation!</em></p>
+    </div>
+
+    <!-- STEP 1: System Status -->
+    <div class="test-box">
+        <div class="step-title">
+            <span class="step-number">1</span>
+            <h3>System Status Check</h3>
+        </div>
+        <button onclick="checkSystemStatus()">🔍 Check Auth System</button>
+        <div id="status-result" class="result-box"></div>
+    </div>
+    
+    <!-- STEP 2: User Registration -->
+    <div class="test-box">
+        <div class="step-title">
+            <span class="step-number">2</span>
+            <h3>Create New User Account (SIGNUP)</h3>
+        </div>
+        <div class="form-group">
+            <label>Full Name:</label>
+            <input type="text" id="signup-name" placeholder="Enter your full name" value="Test User">
+        </div>
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="signup-email" placeholder="your.email@example.com" value="">
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="signup-password" placeholder="Enter password" value="TestPass123!">
+        </div>
+        <div class="form-group">
+            <label>User Type:</label>
+            <select id="signup-usertype">
+                <option value="Customer">Customer</option>
+                <option value="Retailer">Retailer</option>
+            </select>
+        </div>
+        <button onclick="testSignup()" id="signup-btn">📝 Create Account</button>
+        <div id="signup-result" class="result-box"></div>
+    </div>
+
+    <!-- STEP 3: User Login -->
+    <div class="test-box">
+        <div class="step-title">
+            <span class="step-number">3</span>
+            <h3>Login with New Account</h3>
+        </div>
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="login-email" placeholder="Same email as signup">
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="login-password" placeholder="Same password as signup">
+        </div>
+        <button onclick="testLogin()" id="login-btn">🔐 Login</button>
+        <button onclick="testLogout()" id="logout-btn" style="background: #dc3545;">🚪 Logout</button>
+        <div id="login-result" class="result-box"></div>
+    </div>
+
+    <!-- STEP 4: Session Management -->
+    <div class="test-box">
+        <div class="step-title">
+            <span class="step-number">4</span>
+            <h3>Session & User Management</h3>
+        </div>
+        <button onclick="getCurrentUser()">👤 Get Current User</button>
+        <button onclick="checkAuthentication()">🔒 Check Auth Status</button>
+        <div id="session-result" class="result-box"></div>
+    </div>
+    
+    <!-- Debug Console -->
+    <div class="test-box">
+        <h3>📝 Debug Console</h3>
+        <div id="console"></div>
+        <button onclick="clearConsole()">🗑️ Clear</button>
+    </div>
+
+    <!-- Load Auth Core -->
+    <script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/niko-auth-core.min.js"></script>
+    
+    <script>
+        // Enhanced debug console with better formatting
+        function log(message, type = 'info') {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                'error': '#ff6b6b',
+                'success': '#51cf66', 
+                'warning': '#ffd43b',
+                'info': '#00ff00'
+            };
+            const color = colors[type] || '#00ff00';
+            const icon = {
+                'error': '❌',
+                'success': '✅',
+                'warning': '⚠️',
+                'info': 'ℹ️'
+            }[type] || 'ℹ️';
+            
+            console.innerHTML += `<div style="color: ${color}; margin: 2px 0;">${icon} [${timestamp}] ${message}</div>`;
+            console.scrollTop = console.scrollHeight;
+        }
+        
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '';
+        }
+
+        // Wait for auth core with better error handling
+        async function waitForAuthCore(timeout = 15000) {
+            log('Waiting for NikoAuthCore to load...', 'info');
+            const start = Date.now();
+            
+            while (!window.NikoAuthCore) {
+                if (Date.now() - start > timeout) {
+                    throw new Error('NikoAuthCore failed to load within 15 seconds');
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Wait for initialization
+            while (!window.NikoAuthCore.isInitialized()) {
+                if (Date.now() - start > timeout) {
+                    throw new Error('NikoAuthCore failed to initialize within 15 seconds');
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            log('NikoAuthCore loaded and initialized!', 'success');
+            return window.NikoAuthCore;
+        }
+        
+        // STEP 1: System Status Check
+        async function checkSystemStatus() {
+            const result = document.getElementById('status-result');
+            let html = '<h4>System Status:</h4>';
+            
+            try {
+                log('Checking system status...', 'info');
+                
+                // Check if NikoAuthCore exists and is initialized
+                if (window.NikoAuthCore) {
+                    html += '<p style="color: green;">✅ NikoAuthCore loaded</p>';
+                    log('NikoAuthCore found on window object', 'success');
+                    
+                    if (window.NikoAuthCore.isInitialized()) {
+                        html += '<p style="color: green;">✅ System initialized and ready</p>';
+                        log('System is initialized and ready', 'success');
+                    } else {
+                        html += '<p style="color: orange;">⚠️ System not fully initialized</p>';
+                        log('System not fully initialized', 'warning');
+                    }
+                    
+                    // Check current user
+                    try {
+                        const user = await window.NikoAuthCore.getCurrentUser();
+                        if (user) {
+                            html += `<p style="color: blue;">👤 Current user: ${user.email}</p>`;
+                            html += `<p style="color: blue;">📧 Email confirmed: ${user.email_confirmed_at ? 'Yes' : 'No'}</p>`;
+                            log(`Current user logged in: ${user.email}`, 'info');
+                        } else {
+                            html += '<p style="color: gray;">👤 No user currently logged in</p>';
+                            log('No user currently logged in', 'info');
+                        }
+                    } catch (error) {
+                        html += `<p style="color: red;">❌ Error checking current user: ${error.message}</p>`;
+                        log(`Error checking current user: ${error.message}`, 'error');
+                    }
+                } else {
+                    html += '<p style="color: red;">❌ NikoAuthCore not loaded</p>';
+                    log('NikoAuthCore not found - system not loaded', 'error');
+                }
+                
+            } catch (error) {
+                html += `<p style="color: red;">❌ Status check failed: ${error.message}</p>`;
+                log(`Status check failed: ${error.message}`, 'error');
+            }
+            
+            result.innerHTML = html;
+        }
+        
+        // STEP 2: Test Signup
+        async function testSignup() {
+            const result = document.getElementById('signup-result');
+            const btn = document.getElementById('signup-btn');
+            
+            const name = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value.trim();
+            const userType = document.getElementById('signup-usertype').value;
+            
+            // Validation
+            if (!name || !email || !password) {
+                result.innerHTML = '<p style="color: red;">❌ Please fill in all fields</p>';
+                log('Signup validation failed - missing fields', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                result.innerHTML = '<p style="color: red;">❌ Password must be at least 6 characters</p>';
+                log('Signup validation failed - password too short', 'error');
+                return;
+            }
+            
+            try {
+                log(`Starting signup for ${email} as ${userType}`, 'info');
+                
+                // Wait for auth core
+                const authCore = await waitForAuthCore();
+                
+                // Show loading
+                btn.textContent = 'Creating Account...';
+                btn.disabled = true;
+                
+                const signupResult = await authCore.register(email, password, name, userType);
+                log(`Signup result: ${JSON.stringify(signupResult)}`, 'info');
+                
+                if (signupResult.success) {
+                    result.innerHTML = `
+                        <h4 style="color: green;">✅ Account Created Successfully!</h4>
+                        <p><strong>Email:</strong> ${signupResult.user.email}</p>
+                        <p><strong>User ID:</strong> ${signupResult.user.id}</p>
+                        <p><strong>Type:</strong> ${userType}</p>
+                        <p style="color: orange;"><strong>⚠️ Important:</strong> Check your email for confirmation link!</p>
+                        <p><em>After confirming your email, you can login below.</em></p>
+                    `;
+                    
+                    // Auto-fill login form
+                    document.getElementById('login-email').value = email;
+                    document.getElementById('login-password').value = password;
+                    
+                    log(`Account created successfully for ${email}`, 'success');
+                } else {
+                    result.innerHTML = `<p style="color: red;">❌ Signup failed: ${signupResult.error}</p>`;
+                    log(`Signup failed: ${signupResult.error}`, 'error');
+                }
+                
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">❌ Signup error: ${error.message}</p>`;
+                log(`Signup error: ${error.message}`, 'error');
+            } finally {
+                btn.textContent = '📝 Create Account';
+                btn.disabled = false;
+            }
+        }
+        
+        // STEP 3: Test Login
+        async function testLogin() {
+            const result = document.getElementById('login-result');
+            const btn = document.getElementById('login-btn');
+            
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            
+            if (!email || !password) {
+                result.innerHTML = '<p style="color: red;">❌ Please enter email and password</p>';
+                return;
+            }
+            
+            try {
+                log(`Attempting login for ${email}`, 'info');
+                
+                const authCore = await waitForAuthCore();
+                
+                btn.textContent = 'Logging in...';
+                btn.disabled = true;
+                
+                const loginResult = await authCore.login(email, password);
+                log(`Login result: ${JSON.stringify(loginResult)}`, 'info');
+                
+                if (loginResult.success) {
+                    result.innerHTML = `
+                        <h4 style="color: green;">✅ Login Successful!</h4>
+                        <p><strong>Welcome:</strong> ${loginResult.user.email}</p>
+                        <p><strong>User ID:</strong> ${loginResult.user.id}</p>
+                        <p><strong>Last Sign In:</strong> ${new Date(loginResult.user.last_sign_in_at).toLocaleString()}</p>
+                    `;
+                    log(`Login successful for ${email}`, 'success');
+                } else {
+                    result.innerHTML = `<p style="color: red;">❌ Login failed: ${loginResult.error}</p>`;
+                    if (loginResult.error.includes('Email not confirmed')) {
+                        result.innerHTML += '<p style="color: orange;">💡 <strong>Tip:</strong> Check your email and click the confirmation link first!</p>';
+                    }
+                    log(`Login failed: ${loginResult.error}`, 'error');
+                }
+                
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">❌ Login error: ${error.message}</p>`;
+                log(`Login error: ${error.message}`, 'error');
+            } finally {
+                btn.textContent = '🔐 Login';
+                btn.disabled = false;
+            }
+        }
+        
+        // Logout function
+        async function testLogout() {
+            try {
+                log('Attempting logout...', 'info');
+                const authCore = await waitForAuthCore();
+                const result = await authCore.logout();
+                
+                if (result.success) {
+                    document.getElementById('login-result').innerHTML = '<p style="color: green;">✅ Logged out successfully</p>';
+                    log('Logout successful', 'success');
+                } else {
+                    log(`Logout failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Logout error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Get current user
+        async function getCurrentUser() {
+            const result = document.getElementById('session-result');
+            try {
+                const authCore = await waitForAuthCore();
+                const user = await authCore.getCurrentUser();
+                
+                if (user) {
+                    result.innerHTML = `
+                        <h4>👤 Current User:</h4>
+                        <p><strong>Email:</strong> ${user.email}</p>
+                        <p><strong>ID:</strong> ${user.id}</p>
+                        <p><strong>Created:</strong> ${new Date(user.created_at).toLocaleString()}</p>
+                        <p><strong>Email Confirmed:</strong> ${user.email_confirmed_at ? 'Yes' : 'No'}</p>
+                    `;
+                    log(`Current user: ${user.email}`, 'success');
+                } else {
+                    result.innerHTML = '<p style="color: gray;">👤 No user logged in</p>';
+                    log('No user currently logged in', 'info');
+                }
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                log(`Get user error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Check authentication status
+        async function checkAuthentication() {
+            try {
+                const authCore = await waitForAuthCore();
+                const isAuth = await authCore.isAuthenticated();
+                const result = document.getElementById('session-result');
+                
+                if (isAuth) {
+                    result.innerHTML = '<p style="color: green;">🔒 User is authenticated</p>';
+                    log('User is authenticated', 'success');
+                } else {
+                    result.innerHTML = '<p style="color: gray;">🔓 User is not authenticated</p>';
+                    log('User is not authenticated', 'info');
+                }
+            } catch (error) {
+                log(`Auth check error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-run status check when page loads
+        window.addEventListener('load', () => {
+            log('=== Niko Auth Complete Test Started ===', 'info');
+            setTimeout(checkSystemStatus, 2000);
+        });
+        
+        // Override console methods to show in debug
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            log(args.join(' '), 'info');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            log(args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+    </script>
+</body>
+</html>
