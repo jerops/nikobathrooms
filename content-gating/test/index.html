@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niko Content Gating Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .customer-content {
+            background-color: #e3f2fd;
+        }
+        
+        .retailer-content {
+            background-color: #f3e5f5;
+        }
+        
+        .public-content {
+            background-color: #f5f5f5;
+        }
+        
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .authenticated { background-color: #d4edda; color: #155724; }
+        .guest { background-color: #f8d7da; color: #721c24; }
+        
+        .debug-info {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Niko Content Gating System Test</h1>
+    
+    <div class="status" id="auth-status">Loading...</div>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="testGuestMode()">Test Guest Mode</button>
+        <button onclick="testCustomerMode()">Test Customer Mode</button>
+        <button onclick="testRetailerMode()">Test Retailer Mode</button>
+        <button onclick="refreshGating()">Refresh Gating</button>
+        <button onclick="showDebugInfo()">Show Debug Info</button>
+    </div>
+    
+    <!-- Public Content -->
+    <div class="test-section public-content">
+        <h3>Public Content (Always Visible)</h3>
+        <p>This content should always be visible to everyone.</p>
+    </div>
+    
+    <!-- Customer-Only Content -->
+    <div class="test-section customer-content" niko-data="customer">
+        <h3>Customer-Only Content</h3>
+        <p>This content should only be visible to authenticated customers.</p>
+        <button>Customer Action Button</button>
+    </div>
+    
+    <!-- Retailer-Only Content -->
+    <div class="test-section retailer-content" niko-data="retailer">
+        <h3>Retailer-Only Content</h3>
+        <p>This content should only be visible to authenticated retailers.</p>
+        <button>Retailer Action Button</button>
+    </div>
+    
+    <!-- Guest-Only Content -->
+    <div class="test-section" niko-data="guest-only">
+        <h3>Guest-Only Content</h3>
+        <p>This content should only be visible to non-authenticated users.</p>
+        <a href="/dev/app/auth/log-in">Login to access more features</a>
+    </div>
+    
+    <!-- Debug Information -->
+    <div class="debug-info" id="debug-info" style="display: none;">
+        <h3>Debug Information</h3>
+        <div id="debug-content"></div>
+    </div>
+
+    <!-- Core Authentication System (Required) -->
+    <script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/niko-pim-auth/dist/niko-pim.min.js"></script>
+    
+    <!-- Finsweet Attributes (Optional - for advanced filtering) -->
+    <script async src="https://cdn.jsdelivr.net/npm/@finsweet/attributes-listfilter@1/listfilter.js"></script>
+    
+    <!-- Content Gating System (This Module) -->
+    <script src="../dist/niko-content-gating.min.js"></script>
+
+    <script>
+        // Test functions
+        function updateStatus() {
+            const statusEl = document.getElementById('auth-status');
+            const authState = window.NikoContentGating?.getAuthState();
+            
+            if (authState?.isAuthenticated) {
+                statusEl.className = 'status authenticated';
+                statusEl.textContent = `Authenticated as ${authState.userType}`;
+            } else {
+                statusEl.className = 'status guest';
+                statusEl.textContent = 'Guest (Not Authenticated)';
+            }
+        }
+        
+        function testGuestMode() {
+            if (window.NikoContentGating?.debug) {
+                window.NikoContentGating.debug.applyTestGating(false, null);
+                updateStatus();
+            }
+        }
+        
+        function testCustomerMode() {
+            if (window.NikoContentGating?.debug) {
+                window.NikoContentGating.debug.applyTestGating(true, 'Customer');
+                updateStatus();
+            }
+        }
+        
+        function testRetailerMode() {
+            if (window.NikoContentGating?.debug) {
+                window.NikoContentGating.debug.applyTestGating(true, 'Retailer');
+                updateStatus();
+            }
+        }
+        
+        function refreshGating() {
+            if (window.NikoContentGating?.refreshGating) {
+                window.NikoContentGating.refreshGating();
+                updateStatus();
+            }
+        }
+        
+        function showDebugInfo() {
+            const debugEl = document.getElementById('debug-info');
+            const debugContentEl = document.getElementById('debug-content');
+            
+            if (debugEl.style.display === 'none') {
+                const authState = window.NikoContentGating?.getAuthState() || {};
+                const coreSystem = window.NikoPIM || {};
+                
+                debugContentEl.innerHTML = `
+                    <strong>Content Gating System:</strong><br>
+                    - Initialized: ${window.NikoContentGating?.isInitialized() || false}<br>
+                    - Auth State: ${JSON.stringify(authState, null, 2)}<br>
+                    <br>
+                    <strong>Core Auth System:</strong><br>
+                    - Available: ${!!window.NikoPIM}<br>
+                    - User: ${coreSystem.getCurrentUser?.()?.email || 'None'}<br>
+                    - Role: ${coreSystem.getUserRole?.() || 'None'}<br>
+                    <br>
+                    <strong>Finsweet:</strong><br>
+                    - Available: ${!!window.fsAttributes}<br>
+                    <br>
+                    <strong>Session Storage:</strong><br>
+                    - niko_content_gating_state: ${sessionStorage.getItem('niko_content_gating_state') || 'None'}
+                `;
+                
+                debugEl.style.display = 'block';
+            } else {
+                debugEl.style.display = 'none';
+            }
+        }
+        
+        // Initialize status on page load
+        setTimeout(() => {
+            updateStatus();
+        }, 2000);
+        
+        // Update status every 5 seconds
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>
