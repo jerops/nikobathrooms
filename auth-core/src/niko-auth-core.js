@@ -266,6 +266,11 @@ if (typeof window !== 'undefined') {
         // Advanced access
         getSupabaseClient: () => authCore.getSupabaseClient()
     };
+    
+    // Signal that auth core is ready immediately after exposing API
+    window.NikoAuthCore._ready = true;
+    window.dispatchEvent(new Event('NikoAuthCoreReady'));
+    console.log('NikoAuthCore API exposed and ready');
 }
 
 export default NikoAuthCore;
