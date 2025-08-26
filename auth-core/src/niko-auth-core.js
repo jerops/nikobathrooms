@@ -6,6 +6,7 @@ class NikoAuthCore {
         this.currentUser = null;
         this.userRole = null;
         this.isInitialized = false;
+        this._ready = false;
     }
     
     async init() {
@@ -20,7 +21,13 @@ class NikoAuthCore {
             await this.checkAuthState();
             this.setupEventListeners();
             this.isInitialized = true;
+            this._ready = true;
+            
             console.log('✅ Niko Auth Core initialized successfully');
+            
+            // Fire ready event after everything is set up
+            window.dispatchEvent(new CustomEvent("NikoAuthCore:ready"));
+            console.log('✅ NikoAuthCore:ready event fired');
             
             return true;
         } catch (error) {
@@ -215,7 +222,7 @@ class NikoAuthCore {
         return !!this.currentUser;
     }
     
-    // Method version for CMS integration compatibility
+    // Compatibility methods for CMS integration
     getIsInitialized() {
         return this.isInitialized;
     }
@@ -231,23 +238,26 @@ if (typeof window !== 'undefined') {
     
     // Initialize on DOM ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            authCore.init();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await authCore.init();
         });
     } else {
         authCore.init();
     }
     
-    // Expose global API
+    // Expose global API with ALL methods properly bound
     window.NikoAuthCore = {
         // Auth methods
         register: async (email, password, name, userType) => {
+            console.log('NikoAuthCore.register called with:', { email, name, userType });
             return await authCore.register(email, password, name, userType);
         },
         login: async (email, password) => {
+            console.log('NikoAuthCore.login called with:', email);
             return await authCore.login(email, password);
         },
         logout: async () => {
+            console.log('NikoAuthCore.logout called');
             return await authCore.logout();
         },
         
@@ -256,7 +266,7 @@ if (typeof window !== 'undefined') {
         getUserRole: () => authCore.getUserRole(),
         isAuthenticated: () => authCore.isAuthenticated(),
         
-        // Compatibility methods
+        // Compatibility methods for CMS integration
         isInitialized: () => authCore.getIsInitialized(),
         
         // Utility methods
@@ -264,13 +274,14 @@ if (typeof window !== 'undefined') {
         redirectToDashboard: () => authCore.redirectToDashboard(),
         
         // Advanced access
-        getSupabaseClient: () => authCore.getSupabaseClient()
+        getSupabaseClient: () => authCore.getSupabaseClient(),
+        
+        // Internal access for debugging
+        _authCore: authCore,
+        _ready: true
     };
     
-    // ✅ FIXED: Fire the correct ready event that form handlers expect
-    window.NikoAuthCore._ready = true;
-    window.dispatchEvent(new CustomEvent("NikoAuthCore:ready"));
-    console.log('✅ NikoAuthCore API exposed and ready - ready event fired');
+    console.log('✅ NikoAuthCore API exposed with methods:', Object.keys(window.NikoAuthCore));
 }
 
 export default NikoAuthCore;
