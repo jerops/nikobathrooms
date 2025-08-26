@@ -5,8 +5,10 @@ module.exports = {
   output: {
     filename: 'niko-auth-core.min.js',
     path: path.resolve(__dirname, 'dist'),
-    library: 'NikoAuthCore',
-    libraryTarget: 'umd',
+    library: {
+      name: 'NikoAuthCore',
+      type: 'window'
+    },
     globalObject: 'this',
     clean: true
   },
@@ -26,5 +28,6 @@ module.exports = {
   },
   optimization: {
     minimize: true
-  }
+  },
+  mode: 'production'
 };
