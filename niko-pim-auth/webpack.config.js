@@ -2,7 +2,7 @@ const path = require('path');
 const webpack = require('webpack');
 
 module.exports = {
-    entry: './src/niko-pim-authentication-system.js',
+    entry: './src/niko-pim-authentication-system.js',  // Use the corrected main file
     output: {
         filename: 'niko-pim.min.js',
         path: path.resolve(__dirname, 'dist'),
