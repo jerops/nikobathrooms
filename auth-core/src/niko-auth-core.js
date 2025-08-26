@@ -215,6 +215,11 @@ class NikoAuthCore {
         return !!this.currentUser;
     }
     
+    // Method version for CMS integration compatibility
+    getIsInitialized() {
+        return this.isInitialized;
+    }
+    
     getSupabaseClient() {
         return this.supabase;
     }
@@ -251,13 +256,15 @@ if (typeof window !== 'undefined') {
         getUserRole: () => authCore.getUserRole(),
         isAuthenticated: () => authCore.isAuthenticated(),
         
+        // Compatibility methods
+        isInitialized: () => authCore.getIsInitialized(),
+        
         // Utility methods
         redirectToLogin: (returnUrl) => authCore.redirectToLogin(returnUrl),
         redirectToDashboard: () => authCore.redirectToDashboard(),
         
         // Advanced access
-        getSupabaseClient: () => authCore.getSupabaseClient(),
-        isInitialized: () => authCore.isInitialized
+        getSupabaseClient: () => authCore.getSupabaseClient()
     };
 }
 
