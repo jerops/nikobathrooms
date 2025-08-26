@@ -1,130 +1,150 @@
-# Niko Bathrooms PIM System - Modular CDN Architecture
+# CDN Module Reference
 
-## Available CDN Modules
+Complete reference for all available CDN modules in the Niko Bathrooms PIM System.
 
-Each functionality is isolated in its own CDN link for modular architecture, better performance, and easier maintenance.
+## Quick Reference
 
-### Core Authentication
-**CDN Link:**
+| Module | CDN Link | Size | Dependencies |
+|--------|----------|------|--------------|
+| Auth Core | `@main/auth-core/dist/niko-auth-core.min.js` | 131KB | None |
+| CMS Integration | `@main/cms-user-integration/dist/niko-cms-integration.min.js` | 12.8KB | Auth Core |
+| Signup Forms | `@main/webflow-forms/dist/signup-page.js` | ~8KB | Auth Core |
+| Login Forms | `@main/webflow-forms/dist/login-page.js` | ~6KB | Auth Core |
+| Content Gating | `@phase-5.3-content-gating/content-gating/dist/niko-content-gating.min.js` | 28KB | Auth Core |
+
+## Implementation Patterns
+
+### Basic Authentication
+**Use Case:** Simple authentication without CMS integration
 ```html
 <script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
 ```
-**Features:** User registration, login/logout, Supabase authentication, role-based redirects, domain detection  
-**Global API:** `window.NikoAuthCore`  
-**Size:** 131KB  
-**Status:** Production Ready
+
+### Authentication with CMS Sync
+**Use Case:** User registration syncs with Webflow Customer/Retailer collections
+```html
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/cms-user-integration/dist/niko-cms-integration.min.js"></script>
+```
+
+### Login Page Implementation
+```html
+<!-- Site-wide (in head) -->
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/cms-user-integration/dist/niko-cms-integration.min.js"></script>
+
+<!-- Page-specific (before </body>) -->
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/webflow-forms/dist/login-page.js"></script>
+```
+
+### Signup Page Implementation
+```html
+<!-- Site-wide (in head) -->
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/cms-user-integration/dist/niko-cms-integration.min.js"></script>
+
+<!-- Page-specific (before </body>) -->
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/webflow-forms/dist/signup-page.js"></script>
+```
+
+### Dashboard with Content Gating
+```html
+<!-- Site-wide (in head) -->
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/cms-user-integration/dist/niko-cms-integration.min.js"></script>
+
+<!-- Dashboard-specific (in head) -->
+<script async src="https://cdn.jsdelivr.net/npm/@finsweet/attributes-listfilter@1/listfilter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@phase-5.3-content-gating/content-gating/dist/niko-content-gating.min.js"></script>
+```
+
+## Module Details
+
+### Authentication Core
+**Primary Functions:**
+- User registration (Customer/Retailer roles)
+- Login/logout with email confirmation handling
+- Automatic domain detection (staging vs production)
+- Role-based dashboard redirects
+- Session state management
+
+**Global API:** `window.NikoAuthCore`
+
+**Key Methods:**
+```javascript
+// Authentication
+await NikoAuthCore.register(email, password, name, userType)
+await NikoAuthCore.login(email, password)
+await NikoAuthCore.logout()
+
+// State checking
+NikoAuthCore.isAuthenticated()
+NikoAuthCore.getCurrentUser()
+NikoAuthCore.getUserRole()
+
+// Utilities
+NikoAuthCore.redirectToLogin()
+NikoAuthCore.redirectToDashboard()
+```
 
 ### CMS User Integration
-**CDN Link:**
-```html
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/cms-user-integration/dist/niko-cms-integration.min.js"></script>
-```
-**Features:** Webflow CMS sync, Firebase UID linking, Edge Functions integration, wishlist management  
-**Global API:** `window.NikoCMSIntegration`  
-**Dependencies:** Requires auth-core  
-**Size:** 12.8KB  
-**Status:** Production Ready
+**Primary Functions:**
+- Automatic Webflow CMS record creation on user registration
+- User data synchronization between Supabase and Webflow
+- Firebase UID linking for record association
+- Edge Functions integration for CMS operations
 
-### Webflow Forms
-**CDN Link:**
-```html
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/webflow-forms/dist/niko-webflow-forms.min.js"></script>
-```
-**Features:** Login/signup form handlers, password toggles, Webflow modal integration, error handling  
-**Global API:** `window.NikoWebflowForms`  
-**Dependencies:** Requires auth-core  
-**Size:** TBD (after build)  
-**Status:** Ready for Build
+**Global API:** `window.NikoCMSIntegration`
+
+**Process Flow:**
+1. User registers via Auth Core
+2. CMS Integration detects registration
+3. Edge Function creates matching Webflow CMS record
+4. Records linked via firebase-uid field
+5. User data stays synchronized
+
+### Webflow Form Handlers
+**Signup Handler Features:**
+- Customer/Retailer registration forms
+- Password visibility toggles
+- Webflow confirmation modal integration
+- Email validation and error display
+
+**Login Handler Features:**
+- Customer/Retailer login forms
+- Email confirmation status handling
+- Domain-aware dashboard redirects
+- Password visibility toggles
+
+Both handlers preserve existing Webflow functionality while integrating with the modular authentication system.
 
 ### Content Gating
-**CDN Link:**
+**Primary Functions:**
+- Role-based content visibility
+- Authentication state monitoring
+- CSS fallback for non-JavaScript scenarios
+- Finsweet Attributes integration
+
+**Usage:**
 ```html
-<script async src="https://cdn.jsdelivr.net/npm/@finsweet/attributes-listfilter@1/listfilter.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@phase-5.3-content-gating/content-gating/dist/niko-content-gating.min.js"></script>
-```
-**Features:** Role-based content visibility, authentication state management, CSS fallback gating  
-**Global API:** `window.NikoContentGating`  
-**Dependencies:** Requires auth-core + Finsweet Attributes  
-**Size:** 28KB  
-**Status:** Production Ready
+<!-- Customer-only content -->
+<div niko-data="customer">Customer exclusive content</div>
 
-## Usage Scenarios
-
-### Basic Authentication Only
-```html
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
-```
-**Size:** 131KB  
-**Use Case:** API-based authentication without forms
-
-### Authentication with Forms
-```html
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/webflow-forms/dist/niko-webflow-forms.min.js"></script>
-```
-**Size:** ~145KB  
-**Use Case:** Complete login/signup functionality
-
-### Full CMS Integration
-```html
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/cms-user-integration/dist/niko-cms-integration.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/webflow-forms/dist/niko-webflow-forms.min.js"></script>
-```
-**Size:** ~158KB  
-**Use Case:** Forms + CMS sync + wishlist management
-
-### Complete System
-```html
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/cms-user-integration/dist/niko-cms-integration.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/webflow-forms/dist/niko-webflow-forms.min.js"></script>
-<script async src="https://cdn.jsdelivr.net/npm/@finsweet/attributes-listfilter@1/listfilter.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@phase-5.3-content-gating/content-gating/dist/niko-content-gating.min.js"></script>
-```
-**Size:** ~186KB  
-**Use Case:** Full-featured dashboard with all capabilities
-
-## Migration from Backup Scripts
-
-### Replace These:
-```html
-<!-- OLD - Remove these -->
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms-working-backup@main/webflow-scripts/signup-page.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms-working-backup@main/webflow-scripts/login-page.js"></script>
+<!-- Retailer-only content -->
+<div niko-data="retailer">Retailer exclusive content</div>
 ```
 
-### With This:
-```html
-<!-- NEW - Integrated modular system -->
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/webflow-forms/dist/niko-webflow-forms.min.js"></script>
-```
+## Load Order Requirements
 
-## Build Instructions
+1. **Auth Core** - Must load first (all other modules depend on it)
+2. **CMS Integration** - Loads after Auth Core, before form handlers
+3. **Form Handlers** - Page-specific, load after DOM ready
+4. **Content Gating** - Requires Auth Core, can load independently
 
-```bash
-# Pull latest changes
-git pull origin main
+## Performance Considerations
 
-# Build webflow-forms module
-cd webflow-forms
-npm install
-npm run build
-git add dist/ -f
-cd ..
-
-# Commit and push
-git commit -m "Build webflow-forms module"
-git push origin main
-```
-
-## Benefits Achieved
-
-- **Preserved Working Logic:** Original form handlers kept unchanged
-- **Modular Architecture:** Load only required functionality  
-- **Single CDN Management:** All modules in one repository
-- **Domain-Aware Redirects:** Automatic staging/production detection
-- **Error Handling:** Email confirmation prompts and validation
-- **Password Toggles:** UI functionality maintained
-- **Modal Integration:** Webflow confirmation modals preserved
+- **Minimal Setup:** 131KB (Auth Core only)
+- **Standard Setup:** 143.8KB (Auth Core + CMS Integration)
+- **Complete Setup:** ~171.8KB (All modules)
+- **Page-specific modules** reduce unnecessary loading
+- **CDN caching** ensures fast subsequent loads
