@@ -12,10 +12,10 @@ class NikoAuthCore {
     async init() {
         console.log('Initializing Niko Auth Core...');
         try {
-            // Initialize Supabase client
+            // Initialize Supabase client with CORRECT API key
             this.supabase = createClient(
                 'https://bzjoxjqfpmjhbfijthpp.supabase.co',
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6am94anFmcG1qaGJmaWp0aHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NjIyMzksImV4cCI6MjA3MTMzODIzOX0.ry3Xbso3Yr6HORiYZv3Bae1txMu1n7h4Ib3adKX1Qqs'
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6am94anFmcG1qaGJmaWp0aHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUzMTU2MzksImV4cCI6MjA1MDg5MTYzOX0.sL9omeLIgpgqYjTJM6SGQPSvUvm5z-Yr9rOzk0i2mJk'
             );
             
             await this.checkAuthState();
