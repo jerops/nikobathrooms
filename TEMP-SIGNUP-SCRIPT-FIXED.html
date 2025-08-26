@@ -1,0 +1,129 @@
+<!-- CORRECTED Signup Form Handler with Fixed Password Toggle -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fix password toggle functionality FIRST
+    document.querySelectorAll('.input-visibility-toggle').forEach(toggle => {
+        // Initialize the icons properly
+        const showIcon = toggle.querySelector('[wized="icon_show_password"]');
+        const hideIcon = toggle.querySelector('[wized="icon_hide_password"]');
+        
+        // Initially hide the "hide" icon
+        if (hideIcon) hideIcon.style.display = 'none';
+        if (showIcon) showIcon.style.display = 'block';
+        
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const passwordInput = this.previousElementSibling || this.parentElement.querySelector('input[type="password"], input[type="text"]');
+            
+            if (passwordInput) {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    if (showIcon) showIcon.style.display = 'none';
+                    if (hideIcon) hideIcon.style.display = 'block';
+                } else {
+                    passwordInput.type = 'password';
+                    if (showIcon) showIcon.style.display = 'block';
+                    if (hideIcon) hideIcon.style.display = 'none';
+                }
+            }
+        });
+    });
+    
+    // Wait for NikoAuthCore to initialize
+    const waitForAuth = setInterval(() => {
+        if (window.NikoAuthCore && window.NikoAuthCore.isInitialized()) {
+            clearInterval(waitForAuth);
+            
+            // Find forms by their actual IDs
+            const customerForm = document.querySelector('#wf-form-Sign-up-Customer');
+            const retailerForm = document.querySelector('#wf-form-Sign-up-Retailer');
+            
+            if (customerForm) {
+                customerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const name = customerForm.querySelector('[name="customer-name-input"]').value;
+                    const email = customerForm.querySelector('[name="customer-email-input"]').value;
+                    const password = customerForm.querySelector('[name="customer-password-input"]').value;
+                    const confirmPassword = customerForm.querySelector('[name="customer-confirm-password-input"]').value;
+                    
+                    // Validation
+                    if (!name || !email || !password) {
+                        alert('Please fill in all fields!');
+                        return;
+                    }
+                    
+                    if (password !== confirmPassword) {
+                        alert('Passwords do not match!');
+                        return;
+                    }
+                    
+                    if (password.length < 6) {
+                        alert('Password must be at least 6 characters long!');
+                        return;
+                    }
+                    
+                    console.log('Attempting customer registration...', { email, name });
+                    
+                    try {
+                        const result = await window.NikoAuthCore.register(email, password, name, 'Customer');
+                        if (result.success) {
+                            alert('Registration successful! Redirecting to dashboard...');
+                            window.location.href = '/dev/app/customer/dashboard';
+                        } else {
+                            alert('Registration failed: ' + result.error);
+                        }
+                    } catch (error) {
+                        console.error('Registration error:', error);
+                        alert('Registration failed: ' + error.message);
+                    }
+                });
+            }
+            
+            if (retailerForm) {
+                retailerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const name = retailerForm.querySelector('[name="retailer-name-input"]').value;
+                    const email = retailerForm.querySelector('[name="retailer-email-input"]').value;
+                    const password = retailerForm.querySelector('[name="retailer-password-input"]').value;
+                    const confirmPassword = retailerForm.querySelector('[name="retailer-confirm-password-input"]').value;
+                    
+                    // Validation
+                    if (!name || !email || !password) {
+                        alert('Please fill in all fields!');
+                        return;
+                    }
+                    
+                    if (password !== confirmPassword) {
+                        alert('Passwords do not match!');
+                        return;
+                    }
+                    
+                    if (password.length < 6) {
+                        alert('Password must be at least 6 characters long!');
+                        return;
+                    }
+                    
+                    console.log('Attempting retailer registration...', { email, name });
+                    
+                    try {
+                        const result = await window.NikoAuthCore.register(email, password, name, 'Retailer');
+                        if (result.success) {
+                            alert('Registration successful! Redirecting to dashboard...');
+                            window.location.href = '/dev/app/retailer/dashboard';
+                        } else {
+                            alert('Registration failed: ' + result.error);
+                        }
+                    } catch (error) {
+                        console.error('Registration error:', error);
+                        alert('Registration failed: ' + error.message);
+                    }
+                });
+            }
+        }
+    }, 100);
+});
+</script>
