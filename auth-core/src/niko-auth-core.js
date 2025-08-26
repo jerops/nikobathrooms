@@ -20,7 +20,7 @@ class NikoAuthCore {
             await this.checkAuthState();
             this.setupEventListeners();
             this.isInitialized = true;
-            console.log('Niko Auth Core initialized successfully');
+            console.log('✅ Niko Auth Core initialized successfully');
             
             return true;
         } catch (error) {
@@ -267,10 +267,10 @@ if (typeof window !== 'undefined') {
         getSupabaseClient: () => authCore.getSupabaseClient()
     };
     
-    // Signal that auth core is ready immediately after exposing API
+    // ✅ FIXED: Fire the correct ready event that form handlers expect
     window.NikoAuthCore._ready = true;
-    window.dispatchEvent(new Event('NikoAuthCoreReady'));
-    console.log('NikoAuthCore API exposed and ready');
+    window.dispatchEvent(new CustomEvent("NikoAuthCore:ready"));
+    console.log('✅ NikoAuthCore API exposed and ready - ready event fired');
 }
 
 export default NikoAuthCore;
