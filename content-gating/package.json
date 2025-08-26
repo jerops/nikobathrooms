@@ -27,9 +27,6 @@
     "webpack-dev-server": "^4.15.0"
   },
   "dependencies": {},
-  "peerDependencies": {
-    "niko-pim-authentication": "^1.0.0"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jerops/nikobathrooms.git",
