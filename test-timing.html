@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Niko Auth Timing Test</title>
+</head>
+<body>
+    <h1>Authentication Timing Test</h1>
+    <div id="log"></div>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('log').innerHTML += '<div>' + message + '</div>';
+        }
+        
+        log('🚀 Starting test...');
+        
+        // Listen for the ready event BEFORE loading the script
+        window.addEventListener('NikoAuthCoreReady', () => {
+            log('✅ NikoAuthCoreReady event received!');
+            log('✅ NikoAuthCore available: ' + !!window.NikoAuthCore);
+            log('✅ Ready flag: ' + window.NikoAuthCore._ready);
+            
+            // Test a method
+            try {
+                log('✅ isAuthenticated(): ' + window.NikoAuthCore.isAuthenticated());
+                log('🎉 ALL TIMING TESTS PASSED!');
+            } catch (error) {
+                log('❌ Error testing methods: ' + error.message);
+            }
+        });
+    </script>
+    
+    <!-- Load Auth Core -->
+    <script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
+    
+    <!-- Simulate Form Handler Loading -->
+    <script>
+        setTimeout(() => {
+            log('📋 Simulating form handler waiting for auth core...');
+            
+            // This simulates what your form handlers now do
+            const waitForAuthCore = () => {
+                return new Promise((resolve) => {
+                    if (window.NikoAuthCore && window.NikoAuthCore._ready) {
+                        log('✅ Auth core already ready (immediate check)');
+                        resolve();
+                        return;
+                    }
+                    
+                    window.addEventListener('NikoAuthCoreReady', () => {
+                        log('✅ Auth core ready via event listener');
+                        resolve();
+                    }, { once: true });
+                });
+            };
+            
+            waitForAuthCore().then(() => {
+                log('🎯 Form handlers would now initialize successfully!');
+            });
+        }, 100);
+    </script>
+</body>
+</html>
