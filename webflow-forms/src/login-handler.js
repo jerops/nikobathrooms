@@ -24,19 +24,38 @@ class LoginFormHandler {
     }
 
     async waitForAuthCore() {
-        let attempts = 0;
-        const maxAttempts = 100; // 10 seconds max wait
-
-        while (attempts < maxAttempts) {
-            if (window.NikoAuthCore) {
-                return;
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
+        // Check if already available
+        if (window.NikoAuthCore && window.NikoAuthCore._ready) {
+            console.log('Auth core already ready');
+            return;
         }
         
-        console.error('Auth core not found. Make sure auth-core module is loaded first.');
+        // Wait for ready event
+        return new Promise((resolve) => {
+            const checkReady = () => {
+                if (window.NikoAuthCore && window.NikoAuthCore._ready) {
+                    console.log('Auth core is ready');
+                    resolve();
+                    return;
+                }
+                setTimeout(checkReady, 50);
+            };
+            
+            // Listen for ready event
+            window.addEventListener('NikoAuthCoreReady', () => {
+                console.log('Auth core ready event received');
+                resolve();
+            }, { once: true });
+            
+            // Start checking immediately
+            checkReady();
+            
+            // Fallback timeout
+            setTimeout(() => {
+                console.warn('Auth core ready timeout - proceeding anyway');
+                resolve();
+            }, 5000);
+        });
     }
 
     setupPasswordToggles() {
