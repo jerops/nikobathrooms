@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Auth Test</title>
+</head>
+<body>
+    <h1>Simple Auth Core Test</h1>
+    <div id="status">Loading...</div>
+    
+    <script>
+        console.log('=== SIMPLE TEST START ===');
+        
+        window.addEventListener('NikoAuthCoreReady', () => {
+            console.log('✅ Ready event received!');
+            document.getElementById('status').innerHTML = '✅ Auth Core Ready Event Fired!<br>✅ NikoAuthCore: ' + !!window.NikoAuthCore;
+        });
+        
+        // Check after script loads
+        setTimeout(() => {
+            console.log('Direct check - NikoAuthCore exists:', !!window.NikoAuthCore);
+            console.log('Direct check - Ready flag:', window.NikoAuthCore?._ready);
+            
+            if (!window.NikoAuthCore) {
+                document.getElementById('status').innerHTML = '❌ NikoAuthCore not found';
+            } else if (!window.NikoAuthCore._ready) {
+                document.getElementById('status').innerHTML = '❌ NikoAuthCore exists but _ready flag is false';
+            } else {
+                document.getElementById('status').innerHTML = '✅ NikoAuthCore loaded but event may not have fired';
+            }
+        }, 2000);
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/gh/jerops/nikobathrooms@main/auth-core/dist/niko-auth-core.min.js"></script>
+</body>
+</html>
