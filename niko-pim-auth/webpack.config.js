@@ -6,7 +6,7 @@ module.exports = {
     output: {
         filename: 'niko-pim.min.js',
         path: path.resolve(__dirname, 'dist'),
-        library: 'NikoPIM',
+        library: 'NikoAuthCore',  // Changed from 'NikoPIM' to match the expected global name
         libraryTarget: 'window'
     },
     plugins: [
