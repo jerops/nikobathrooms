@@ -4,7 +4,6 @@ import { registerUser } from './auth/supabase-signup-with-webflow-integration.js
 import { loginUser } from './auth/login.js';
 import { logoutUser } from './auth/logout.js';
 import webflowClient from './api/webflow-edge-functions-client.js';
-import ContentGatingController from './content-gating/content-gating-controller.js';
 
 class NikoPIMAuthenticationSystem {
     constructor() {
@@ -12,36 +11,19 @@ class NikoPIMAuthenticationSystem {
         this.currentUser = null;
         this.userRole = null;
         this.webflowUser = null;
-        this.contentGating = new ContentGatingController();
         this.isInitialized = false;
     }
     
     async init() {
-        console.log('Initializing Niko PIM Authentication System with Content Gating...');
+        console.log('Initializing Niko PIM Authentication System...');
         try {
             this.supabase = initializeSupabase();
             webflowClient.initialize();
             
-            // Initialize content gating system first
-            const authState = await this.contentGating.init(this.supabase);
-            
-            // Use auth state from content gating controller
-            if (authState.isAuthenticated) {
-                this.currentUser = { 
-                    id: authState.userId, 
-                    email: authState.email,
-                    user_metadata: { user_type: authState.userType }
-                };
-                this.userRole = authState.userType;
-                
-                // Load Webflow user data
-                await this.loadWebflowUserData();
-            }
-            
             await this.checkAuthState();
             this.setupEventListeners();
             this.isInitialized = true;
-            console.log('Niko PIM Authentication System with Content Gating initialized successfully');
+            console.log('Niko PIM Authentication System initialized successfully');
         } catch (error) {
             console.error('Failed to initialize authentication system:', error);
             throw error;
@@ -56,10 +38,8 @@ class NikoPIMAuthenticationSystem {
                 this.userRole = user.user_metadata?.user_type || USER_ROLES.CUSTOMER;
                 console.log('User authenticated:', user.email, 'Role:', this.userRole);
                 
-                // Load Webflow user data if not already loaded
-                if (!this.webflowUser) {
-                    await this.loadWebflowUserData();
-                }
+                // Load Webflow user data
+                await this.loadWebflowUserData();
             } else {
                 console.log('No authenticated user');
             }
@@ -97,15 +77,11 @@ class NikoPIMAuthenticationSystem {
                 this.currentUser = session.user;
                 this.userRole = session.user.user_metadata?.user_type || USER_ROLES.CUSTOMER;
                 await this.loadWebflowUserData();
-                // Refresh content gating
-                await this.contentGating.refreshAuthState();
                 break;
             case 'SIGNED_OUT':
                 this.currentUser = null;
                 this.userRole = null;
                 this.webflowUser = null;
-                // Clear content gating
-                await this.contentGating.refreshAuthState();
                 break;
         }
     }
@@ -116,56 +92,17 @@ class NikoPIMAuthenticationSystem {
         
         if (result.success && result.webflowRecord) {
             console.log('User registered with Webflow CMS integration:', result.webflowRecord);
-            // Refresh content gating after successful registration
-            setTimeout(async () => {
-                await this.contentGating.refreshAuthState();
-            }, 1000);
         }
         
         return result;
     }
     
     async login(email, password) {
-        const result = await loginUser(email, password);
-        
-        if (result.success) {
-            // Refresh content gating after successful login
-            setTimeout(async () => {
-                await this.contentGating.refreshAuthState();
-            }, 1000);
-        }
-        
-        return result;
+        return await loginUser(email, password);
     }
     
     async logout() {
-        const result = await logoutUser();
-        
-        // Use content gating logout method for proper cleanup
-        await this.contentGating.logout();
-        
-        return result;
-    }
-    
-    // Content gating methods
-    async refreshContentGating() {
-        return await this.contentGating.refreshAuthState();
-    }
-    
-    getContentGatingState() {
-        return this.contentGating.getAuthState();
-    }
-    
-    gateElement(element, authRequired = true, userTypeRequired = null) {
-        return this.contentGating.gateElement(element, authRequired, userTypeRequired);
-    }
-    
-    addLoginPrompt(element, message) {
-        return this.contentGating.addLoginPrompt(element, message);
-    }
-    
-    redirectToLogin(returnUrl) {
-        this.contentGating.redirectToLogin(returnUrl);
+        return await logoutUser();
     }
     
     // Webflow-specific methods
@@ -243,6 +180,17 @@ class NikoPIMAuthenticationSystem {
     getWishlist() {
         return this.webflowUser?.wishlistProducts || [];
     }
+
+    redirectToLogin(returnUrl = null) {
+        const loginUrl = '/dev/app/auth/log-in';
+        const currentUrl = returnUrl || window.location.pathname + window.location.search;
+        
+        if (!currentUrl.includes('/auth/')) {
+            window.location.href = `${loginUrl}?return=${encodeURIComponent(currentUrl)}`;
+        } else {
+            window.location.href = loginUrl;
+        }
+    }
 }
 
 // Initialize and expose globally
@@ -269,6 +217,7 @@ if (typeof window !== 'undefined') {
         window.NikoPIM.getUserRole = () => authSystem.getUserRole();
         window.NikoPIM.getWebflowUser = () => authSystem.getWebflowUser();
         window.NikoPIM.isAuthenticated = () => authSystem.isAuthenticated();
+        window.NikoPIM.redirectToLogin = (returnUrl) => authSystem.redirectToLogin(returnUrl);
         
         // Expose wishlist methods
         window.NikoPIM.getWishlist = () => authSystem.getWishlist();
@@ -279,28 +228,10 @@ if (typeof window !== 'undefined') {
             return await authSystem.removeFromWishlist(productId);
         };
         
-        // Expose content gating methods
-        window.NikoPIM.refreshContentGating = async () => {
-            return await authSystem.refreshContentGating();
-        };
+        // Expose Supabase client for advanced usage (like content gating)
+        window.NikoPIM.supabase = authSystem.supabase;
         
-        window.NikoPIM.getContentGatingState = () => {
-            return authSystem.getContentGatingState();
-        };
-        
-        window.NikoPIM.gateElement = (element, authRequired, userTypeRequired) => {
-            return authSystem.gateElement(element, authRequired, userTypeRequired);
-        };
-        
-        window.NikoPIM.addLoginPrompt = (element, message) => {
-            return authSystem.addLoginPrompt(element, message);
-        };
-        
-        window.NikoPIM.redirectToLogin = (returnUrl) => {
-            return authSystem.redirectToLogin(returnUrl);
-        };
-        
-        console.log('Niko PIM Authentication System ready with Content Gating');
+        console.log('Niko PIM Authentication System ready');
     }).catch(error => {
         console.error('Failed to initialize Niko PIM Authentication System:', error);
     });
