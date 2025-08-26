@@ -1,0 +1,39 @@
+{
+  "name": "niko-content-gating",
+  "version": "1.0.0",
+  "description": "Content gating system for Niko Bathrooms PIM - Role-based content visibility",
+  "main": "dist/niko-content-gating.min.js",
+  "scripts": {
+    "build": "webpack --mode=production",
+    "dev": "webpack --mode=development",
+    "serve": "webpack serve --mode=development",
+    "test": "node test/test-content-gating.js"
+  },
+  "keywords": [
+    "content-gating", 
+    "authentication", 
+    "webflow", 
+    "finsweet", 
+    "role-based-access"
+  ],
+  "author": "Niko Bathrooms",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "babel-loader": "^9.1.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "webpack-dev-server": "^4.15.0"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "niko-pim-authentication": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jerops/nikobathrooms.git",
+    "directory": "content-gating"
+  },
+  "jsdelivr": "dist/niko-content-gating.min.js"
+}
