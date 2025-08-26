@@ -4,21 +4,26 @@ import { registerUser } from './auth/registration.js';
 import { loginUser } from './auth/login.js';
 import { logoutUser } from './auth/logout.js';
 
-class NikoPIM {
+class NikoAuthCore {
   constructor() {
     this.supabase = null;
     this.currentUser = null;
     this.userRole = null;
-    this.isInitialized = false;
+    this.initialized = false;
   }
 
   async init() {
-    console.log('Initializing Niko PIM Authentication System...');
+    console.log('Initializing Niko Auth Core...');
     this.supabase = initializeSupabase();
     await this.checkAuthState();
     this.setupEventListeners();
-    this.isInitialized = true;
-    console.log('Niko PIM initialized successfully');
+    this.initialized = true;
+    console.log('Niko Auth Core initialized successfully');
+  }
+
+  // Required method for CMS integration
+  isInitialized() {
+    return this.initialized;
   }
 
   async checkAuthState() {
@@ -72,27 +77,20 @@ class NikoPIM {
   }
 }
 
+// Export the class for webpack
+export default NikoAuthCore;
+
 // Auto-initialize when DOM is ready
 if (typeof window !== 'undefined') {
-  const nikoPIM = new NikoPIM();
-  window.NikoPIM = nikoPIM;
+  const nikoAuthCore = new NikoAuthCore();
   
-  nikoPIM.init().then(() => {
-    // Explicitly expose methods on the window object
-    window.NikoPIM.register = async (email, password, name, userType) => {
-      return await nikoPIM.register(email, password, name, userType);
-    };
-    
-    window.NikoPIM.login = async (email, password) => {
-      return await nikoPIM.login(email, password);
-    };
-    
-    window.NikoPIM.logout = async () => {
-      return await nikoPIM.logout();
-    };
-    
-    console.log('Methods exposed - register:', typeof window.NikoPIM.register);
+  // Initialize the auth core
+  nikoAuthCore.init().then(() => {
+    console.log('NikoAuthCore ready');
   }).catch(error => {
-    console.error('Failed to initialize NikoPIM:', error);
+    console.error('Failed to initialize NikoAuthCore:', error);
   });
+
+  // Make the instance globally available
+  window.NikoAuthCore = nikoAuthCore;
 }
