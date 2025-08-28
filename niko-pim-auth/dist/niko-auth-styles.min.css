@@ -1,0 +1,32 @@
+/*! Niko Bathrooms Authentication Styles v1.0.0 */
+.niko-auth-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.niko-auth-error {
+  color: #dc3545;
+  font-size: 14px;
+  margin-top: 5px;
+}
+.niko-auth-success {
+  color: #28a745;
+  font-size: 14px;
+  margin-top: 5px;
+}
+.niko-auth-form {
+  position: relative;
+}
+.niko-auth-spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #333;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: niko-spin 1s linear infinite;
+  display: inline-block;
+  margin-left: 10px;
+}
+@keyframes niko-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
